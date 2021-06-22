@@ -26,12 +26,11 @@
 #include "stdlib.h"
 #include <iomanip>
 
-
 unsigned int pc = 0x0;
 
 char memory[8 * 1024];	// only 8KB of memory located at address 0
 
-void emitError(char* s)
+void emitError(const char* s)
 {
 	std::cout << s;
 	exit(0);
@@ -76,7 +75,7 @@ void instDecExec(unsigned int instWord)
 	}
 	else if (opcode == 0x13) {	// I instructions
 		switch (funct3) {
-		case 0:	std::cout << "\tADDI\tx" << rd << ", x" << rs1 << ", " << hex << "0x" << (int)I_imm << "\n";
+		case 0:	std::cout << "\tADDI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
 			break;
 		default:
 			std::cout << "\tUnkown I Instruction \n";
