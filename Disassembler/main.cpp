@@ -61,7 +61,7 @@ void instDecExec(unsigned int instWord)
 	printPrefix(instPC, instWord);
 
 	if (opcode == 0x33) {// R Instructions
-		funct7 = (instWord >> 24) & 0x0000007F;
+		
 		switch (funct3) {
 		case 0: if (funct7 == 32) {
 			std::cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
