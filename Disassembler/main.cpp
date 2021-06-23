@@ -101,9 +101,11 @@ void instDecExec(unsigned int instWord)
 			std::cout << "\tANDI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
 			break;
 		case 0b001: //SLLI
+		{
 			unsigned int shiftAmount = (instWord >> 19) & 0b11111;
 			std::cout << "\tSLLI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
 			break;
+		}
 		case 0b101:
 		{
 			unsigned int shiftAmount = (instWord >> 19) & 0b11111;
