@@ -140,6 +140,8 @@ void instDecExec(unsigned int instWord)
 		case 0b101: // LHU
 			std::cout << "\tLHU\tx" << rd << ", " << std::hex << "0x" << (int)I_imm << ", x" << rs1 << "\n";
 			break;
+		default:
+			std::cout << "\tUnkown Load Instruciton\n";
 		}
 	}
 	else if (opcode == 0b1100111) //JALR instruction
@@ -168,6 +170,8 @@ void instDecExec(unsigned int instWord)
 		case 0b111: //BGEU
 			std::cout << "\tBGEU\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
 			break;
+		default:
+			std::cout << "\tUnkown B Instruction \n";
 		}
 	}
 	else {
