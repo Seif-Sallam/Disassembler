@@ -56,7 +56,7 @@ void instDecExec(unsigned int instWord)
 
 	// — inst[31] — inst[30:25] inst[24:21] inst[20]
 	I_imm = ((instWord >> 20) & 0x7FF) | (((instWord >> 31) ? 0xFFFFF800 : 0x0));
-
+	S_imm = 0;
 	printPrefix(instPC, instWord);
 
 	if (opcode == 0x33) {// R Instructions
