@@ -148,7 +148,7 @@ void instDecExec(unsigned int instWord)
 	{
 		std::cout << "\tJALR\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
 	}
-	else if (opcode == 0b1100011)
+	else if (opcode == 0b1100011)  // B-Type instructions.
 	{
 		switch (funct3)
 		{
@@ -171,7 +171,7 @@ void instDecExec(unsigned int instWord)
 			std::cout << "\tBGEU\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
 			break;
 		default:
-			std::cout << "\tUnkown B Instruction \n";
+			std::cout << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
 		}
 	}
 	else {
