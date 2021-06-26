@@ -37,7 +37,8 @@ void emitError(const char* s)
 	exit(0);
 }
 
-void printPrefix(unsigned int instA, unsigned int instW) {
+void printPrefix(unsigned int instA, unsigned int instW)
+{
 	std::cout << "0x" << std::hex << std::setfill('0') << std::setw(8) << instA << "\t0x" << std::setw(8) << instW;
 }
 
@@ -204,7 +205,7 @@ int main(int argc, char* argv[]) {
 				(((unsigned char)memory[pc + 3]) << 24);
 			pc += 4;
 			// remove the following line once you have a complete simulator
-			if (pc == 40) break;			// stop when PC reached address 32
+			if (instWord == 0) break;			// stop when PC reached address 32
 			instDecExec(instWord);
 		}
 	}
