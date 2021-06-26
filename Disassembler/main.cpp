@@ -55,8 +55,12 @@ void instDecExec(unsigned int instWord)
 	rs2 = (instWord >> 20) & 0x0000001F;
 
 	// — inst[31] — inst[30:25] inst[24:21] inst[20]
-	I_imm = ((instWord >> 20) & 0x7FF) | (((instWord >> 31) ? 0xFFFFF800 : 0x0));
-	S_imm = 0;
+	U_imm = (((instWord >> 12) & 0x000000FF) << 12);
+
+	// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
+	S_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
+		((instWord >> 31) ? 0xFFFFF800 : 0x0);
+
 	printPrefix(instPC, instWord);
 
 	if (opcode == 0x33) {// R Instructions
@@ -73,19 +77,42 @@ void instDecExec(unsigned int instWord)
 			std::cout << "\tUnkown R Instruction \n";
 		}
 	}
-	else if (opcode == 0x13) {	// I instructions
-		switch (funct3) {
-		case 0:	std::cout << "\tADDI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+	else if (opcode == 0b0100011)// S instruction
+	{
+		switch (funct3)
+		{
+		case 0b000://SB
+			std::cout << "\tSB\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
+			break;
+		case 0b001: //SH
+			std::cout << "\tSH\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
+			break;
+		case 0b010: //SW
+			std::cout << "\tSW\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
 			break;
 		default:
-			std::cout << "\tUnkown I Instruction \n";
+			std::cout << "\tUnkown S Instruction \n";
 		}
 	}
+
+
+
+	else if (opcode == 0x37)// U type
+	{
+		std::cout << "\tLUI\tx" << rd << ", " << std::hex << "0x" << (int)U_imm << "\n";
+	}
+	else if (opcode == 0x6F)
+	{
+		std::cout << "\tAUIPC\tx" << rd << ", " << std::hex << "0x" << (int)U_imm << "\n";
+	}
 	else {
-		std::cout << "\tUnkown Instruction \n";
+		std::cout << "\tUnkown U Instruction \n";
+
 	}
 
 }
+
+
 
 int main(int argc, char* argv[]) {
 
