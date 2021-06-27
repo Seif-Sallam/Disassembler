@@ -20,7 +20,6 @@
 	(1) The risc-v ISA Manual ver. 2.1 @ https://riscv.org/specifications/
 	(2) https://github.com/michaeljclark/riscv-meta/blob/master/meta/opcodes
 */
-#include <vector>
 #include <bitset>
 #include <sstream>
 #include <iostream>
@@ -37,7 +36,8 @@ void emitError(const char* s)
 	exit(0);
 }
 
-void printPrefix(unsigned int instA, unsigned int instW) {
+void printPrefix(unsigned int instA, unsigned int instW)
+{
 	std::cout << "0x" << std::hex << std::setfill('0') << std::setw(8) << instA << "\t0x" << std::setw(8) << instW;
 }
 
@@ -57,29 +57,121 @@ void instDecExec(unsigned int instWord)
 
 	// — inst[31] — inst[30:25] inst[24:21] inst[20]
 	I_imm = ((instWord >> 20) & 0x7FF) | (((instWord >> 31) ? 0xFFFFF800 : 0x0));
-
+	// Calculuating the B immediate 
+	// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
+	B_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
+		((instWord >> 31) ? 0xFFFFF800 : 0x0);
 	printPrefix(instPC, instWord);
 
 	if (opcode == 0x33) {// R Instructions
 		funct7 = (instWord >> 24) & 0x0000007F;
 		switch (funct3) {
-		case 0: if (funct7 == 32) {
-			std::cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		case 0:
+		{
+			if (funct7 == 32) {
+				std::cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			}
+			else {
+				std::cout << "\tADD\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			}
+			break;
 		}
-			  else {
-			std::cout << "\tADD\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
-		}
-			  break;
 		default:
 			std::cout << "\tUnkown R Instruction \n";
 		}
 	}
 	else if (opcode == 0x13) {	// I instructions
 		switch (funct3) {
-		case 0:	std::cout << "\tADDI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		case 0:
+			std::cout << "\tADDI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
 			break;
+		case 0b010: // SLTI
+			std::cout << "\tSLTI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		case 0b011: // SLTIU
+			std::cout << "\tSLTIU\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		case 0b100: // XORI
+			std::cout << "\tXORI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		case 0b110: // ORI
+			std::cout << "\tORI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		case 0b111: // ANDI
+			std::cout << "\tANDI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		case 0b001: //SLLI
+		{
+			unsigned int shiftAmount = (instWord >> 19) & 0b11111;
+			std::cout << "\tSLLI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+			break;
+		}
+		case 0b101:
+		{
+			unsigned int shiftAmount = (instWord >> 19) & 0b11111;
+			unsigned int lastBits = (instWord >> 25) & 0b1111111;
+			if (lastBits == 0)
+				// SRLI
+				std::cout << "\tSRLI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+			else
+				//SRAI
+				std::cout << "\tSRAI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+			break;
+		}
 		default:
 			std::cout << "\tUnkown I Instruction \n";
+		}
+	}
+	else if (opcode == 0b0000011) //Load instructions  (I TYPE)
+	{
+		switch (funct3) {
+		case 0b000: //LB
+			std::cout << "\tLB\tx" << rd << ", " << std::hex << "0x" << (int)I_imm << ", x" << rs1 << "\n";
+			break;
+		case 0b001: //LH
+			std::cout << "\tLH\tx" << rd << ", " << std::hex << "0x" << (int)I_imm << ", x" << rs1 << "\n";
+			break;
+		case 0b010: //LW
+			std::cout << "\tLW\tx" << rd << ", " << std::hex << "0x" << (int)I_imm << ", x" << rs1 << "\n";
+			break;
+		case 0b100: // LBU
+			std::cout << "\tLBU\tx" << rd << ", " << std::hex << "0x" << (int)I_imm << ", x" << rs1 << "\n";
+			break;
+		case 0b101: // LHU
+			std::cout << "\tLHU\tx" << rd << ", " << std::hex << "0x" << (int)I_imm << ", x" << rs1 << "\n";
+			break;
+		default:
+			std::cout << "\tUnkown Load Instruciton\n";
+		}
+	}
+	else if (opcode == 0b1100111) //JALR instruction
+	{
+		std::cout << "\tJALR\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+	}
+	else if (opcode == 0b1100011)  // B-Type instructions.
+	{
+		switch (funct3)
+		{
+		case 0b000: //BEQ
+			std::cout << "\tBEQ\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
+			break;
+		case 0b001: //BNE
+			std::cout << "\tBNE\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
+			break; 
+		case 0b100: //BLT
+			std::cout << "\tBLT\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
+			break;
+		case 0b101: //BGE
+			std::cout << "\tBGE\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
+			break;
+		case 0b110: //BLTU
+			std::cout << "\tBLTU\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
+			break;
+		case 0b111: //BGEU
+			std::cout << "\tBGEU\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)B_imm << "\n";
+			break;
+		default:
+			std::cout << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
 		}
 	}
 	else {
