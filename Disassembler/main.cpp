@@ -20,15 +20,16 @@
 	(1) The risc-v ISA Manual ver. 2.1 @ https://riscv.org/specifications/
 	(2) https://github.com/michaeljclark/riscv-meta/blob/master/meta/opcodes
 */
+#include <vector>
 #include <bitset>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include "stdlib.h"
 #include <iomanip>
-
-unsigned int pc = 0x0;
-
+#include "Instruction.h"
 char memory[8 * 1024];	// only 8KB of memory located at address 0
+unsigned int pc = 0x0;
 
 void emitError(const char* s)
 {
@@ -97,6 +98,7 @@ int main(int argc, char* argv[]) {
 
 	inFile.open(argv[1], std::ios::in | std::ios::binary | std::ios::ate);
 
+	std::vector<Instruction*> instructions;
 	if (inFile.is_open())
 	{
 		int fsize = inFile.tellg();
@@ -112,10 +114,17 @@ int main(int argc, char* argv[]) {
 			pc += 4;
 			// remove the following line once you have a complete simulator
 			if (pc == 40) break;			// stop when PC reached address 32
-			instDecExec(instWord);
+			//instDecExec(instWord);
+			instructions.push_back(new Instruction(instWord, &pc));
 		}
 	}
 	else emitError("Cannot access input file\n");
+
+	for (auto& i : instructions)
+	{
+		std::cout << *i;
+	}
+
 
 	/*
 		whateverOut = instWord >> 7
