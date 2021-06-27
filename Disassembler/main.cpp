@@ -61,6 +61,12 @@ void instDecExec(unsigned int instWord)
 	// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
 	B_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
 		((instWord >> 31) ? 0xFFFFF800 : 0x0);
+	U_imm = (((instWord >> 12) & 0x000000FF) << 12);
+
+	// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
+	S_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
+		((instWord >> 31) ? 0xFFFFF800 : 0x0);
+
 	printPrefix(instPC, instWord);
 
 	if (opcode == 0x33) {// R Instructions
@@ -116,6 +122,18 @@ void instDecExec(unsigned int instWord)
 			else
 				//SRAI
 				std::cout << "\tSRAI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+	else if (opcode == 0b0100011)// S instruction
+	{
+		switch (funct3)
+		{
+		case 0b000://SB
+			std::cout << "\tSB\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
+			break;
+		case 0b001: //SH
+			std::cout << "\tSH\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
+			break;
+		case 0b010: //SW
+			std::cout << "\tSW\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
 			break;
 		}
 		default:
@@ -147,6 +165,19 @@ void instDecExec(unsigned int instWord)
 	else if (opcode == 0b1100111) //JALR instruction
 	{
 		std::cout << "\tJALR\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			std::cout << "\tUnkown S Instruction \n";
+		}
+	}
+
+
+
+	else if (opcode == 0x37)// U type
+	{
+		std::cout << "\tLUI\tx" << rd << ", " << std::hex << "0x" << (int)U_imm << "\n";
+	}
+	else if (opcode == 0x6F)
+	{
+		std::cout << "\tAUIPC\tx" << rd << ", " << std::hex << "0x" << (int)U_imm << "\n";
 	}
 	else if (opcode == 0b1100011)  // B-Type instructions.
 	{
@@ -175,10 +206,13 @@ void instDecExec(unsigned int instWord)
 		}
 	}
 	else {
-		std::cout << "\tUnkown Instruction \n";
+		std::cout << "\tUnkown U Instruction \n";
+
 	}
 
 }
+
+
 
 int main(int argc, char* argv[]) {
 
