@@ -9,10 +9,10 @@
 class Instruction {
 public:
 	Instruction(unsigned int instructionWord, unsigned int* pc);
-	void MakeInstruction();
 	void AddLabel(const std::string& labelName);
 	inline std::string GetInstructionStr() { return m_InstructionStr; }
 private:
+	void MakeInstruction();
 	void addPrefix(unsigned int instA);
 	std::string getAPIName(unsigned int regNumber);
 	unsigned int* m_PC;

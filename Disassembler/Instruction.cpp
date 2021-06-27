@@ -17,10 +17,55 @@ void Instruction::MakeInstruction()
 {
 	if (m_IsCompressed)
 	{
+		*m_PC += 2;
+		unsigned int rd, rs1, rs2, funct3, funct7, opcode;
+		unsigned int I_imm, S_imm, B_imm, U_imm, J_imm;
+		unsigned int address;
 
+		unsigned int instPC = *m_PC - 2;
+		opcode = m_InstructionWord & 0x3;
+		funct3 = (m_InstructionWord >> 13) & 0x7;
+
+		//Calculuate the opcode rd, rs1, rs2 and all of that 
+		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
+		addPrefix(instPC);
+		std::stringstream ss;
+		//Put in your switch statement.
+		if (opcode == 0b00)
+		{
+			switch (funct3)
+			{
+			default:
+				ss << "\tUnknown 00 Compressed Instruction\n";
+			}
+		}
+		else if (opcode == 0b01)
+		{
+			switch (funct3)
+			{
+
+			default:
+				ss << "\tUnknown 01 Compressed Instruction\n";
+			}
+		}
+		else if (opcode == 0b10)
+		{
+			switch (funct3)
+			{
+
+			default:
+				ss << "\tUnknown 01 Compressed Instruction\n";
+			}
+		}
+		else
+		{
+			ss << "\t Unknown Compressed Instruction\n";
+		}
+		m_InstructionStr += ss.str();
 	}
 	else
 	{
+		*m_PC += 4;
 		unsigned int rd, rs1, rs2, funct3, funct7, opcode;
 		unsigned int I_imm, S_imm, B_imm, U_imm, J_imm;
 		unsigned int address;
