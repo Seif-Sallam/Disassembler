@@ -27,6 +27,7 @@
 #include "stdlib.h"
 #include <iomanip>
 #include "Instruction.h"
+#include <vector>
 char memory[8 * 1024];	// only 8KB of memory located at address 0
 unsigned int pc = 0x0;
 
@@ -73,35 +74,38 @@ void instDecExec(unsigned int instWord)
 
 	if (opcode == 0x33) {		// R Instructions
 		switch (funct3) {
-		case 0:
-		{
-			if (funct7 == 32) {
-				std::cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
-			}
-			else {
-				std::cout << "\tADD\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
-			}
-			break;
-		}
-		default:
-			std::cout << "\tUnkown R Instruction \n";
 		case 0: if (funct7 == 32) {
-			cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			std::cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 		}
 			  else {
-			cout << "\tADD\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			std::cout << "\tADD\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 		}
 			  break;
-		case 1: cout << "\tSLL\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		case 1: std::cout << "\tSLL\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 			break;
-		case 2: cout << "\tSLT\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		case 2: std::cout << "\tSLT\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 			break;
-		case 3: cout << "\tSLTU\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		case 3: std::cout << "\tSLTU\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 			break;
-		case 4: cout << "\tXOR\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		case 4: std::cout << "\tXOR\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 			break;
-		case 5: if (funct7 == 32) {
-			cout << "\tSRL\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		case 5: {
+			if (funct7 == 32) {
+				std::cout << "\tSRL\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			}
+			else {
+				std::cout << "\tSRA\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			}
+			break;
+		}
+		case 6: 
+			std::cout << "\tOR\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		case 7: 
+			std::cout << "\tAND\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		default:
+			std::cout << "\tUnkown R Instruction \n";
 		}
 	}
 	else if (opcode == 0x13) {	// I instructions
@@ -140,6 +144,10 @@ void instDecExec(unsigned int instWord)
 			else
 				//SRAI
 				std::cout << "\tSRAI\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+			break;
+		}
+		}
+	}
 	else if (opcode == 0b0100011)// S instruction
 	{
 		switch (funct3)
@@ -153,18 +161,10 @@ void instDecExec(unsigned int instWord)
 		case 0b010: //SW
 			std::cout << "\tSW\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
 			break;
-		}
-			  else {
-			cout << "\tSRA\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
-		}
-			  break;
-		case 6: cout << "\tOR\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
-			break;
-		case 7: cout << "\tAND\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
-			break;
 		default:
-			cout << "\tUnkown R Instruction \n";
+			std::cout << "\tUnknown S Instruction\n";
 		}
+
 	}
 	else if (opcode == 0b0000011) //Load instructions  (I TYPE)
 	{
@@ -191,12 +191,7 @@ void instDecExec(unsigned int instWord)
 	else if (opcode == 0b1100111) //JALR instruction
 	{
 		std::cout << "\tJALR\tx" << rd << ", x" << rs1 << ", " << std::hex << "0x" << (int)I_imm << "\n";
-			std::cout << "\tUnkown S Instruction \n";
-		}
 	}
-
-
-
 	else if (opcode == 0x37)// U type
 	{
 		std::cout << "\tLUI\tx" << rd << ", " << std::hex << "0x" << (int)U_imm << "\n";
@@ -234,11 +229,11 @@ void instDecExec(unsigned int instWord)
 
 	else if (opcode == 0x6F)
 	{
-		cout << "\tJAL\tx" << rd << ", " << hex << "0x" << (int)J_imm << "\n";
+		std::cout << "\tJAL\tx" << rd << ", " << std::hex << "0x" << (int)J_imm << "\n";
 	}
-	else {
-		cout << "\tUnkown J Instruction \n";
-
+	else
+	{
+		std::cout << "\tUnkown Instruction \n";
 	}
 
 }
