@@ -1,5 +1,7 @@
 #include "Instruction.h"
 
+unsigned int Instruction::m_LabelCounter = 0;
+
 Instruction::Instruction(unsigned int instructionWord, unsigned int* pc)
 	: m_InstructionStr(""), m_InstructionWord(instructionWord), m_PC(pc)
 {
