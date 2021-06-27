@@ -54,7 +54,7 @@ void instDecExec(unsigned int instWord)
 	funct3 = (instWord >> 12) & 0x00000007;
 	rs1 = (instWord >> 15) & 0x0000001F;
 	rs2 = (instWord >> 20) & 0x0000001F;
-
+	funct7 = (instWord >> 25) & 0x0000007F;
 	// — inst[31] — inst[30:25] inst[24:21] inst[20]
 	I_imm = ((instWord >> 20) & 0x7FF) | (((instWord >> 31) ? 0xFFFFF800 : 0x0));
 	// Calculuating the B immediate 
@@ -62,6 +62,8 @@ void instDecExec(unsigned int instWord)
 	B_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
 		((instWord >> 31) ? 0xFFFFF800 : 0x0);
 	U_imm = (((instWord >> 12) & 0x000000FF) << 12);
+	J_imm = (((instWord >> 12) & 0x000000FF) << 12) | (((instWord >> 20) & 1) << 11) | (((instWord >> 21) & 0x000003FF) << 1) |
+		((instWord >> 31) ? 0xFFFFF800 : 0x0);
 
 	// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
 	S_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
@@ -69,8 +71,7 @@ void instDecExec(unsigned int instWord)
 
 	printPrefix(instPC, instWord);
 
-	if (opcode == 0x33) {// R Instructions
-		funct7 = (instWord >> 24) & 0x0000007F;
+	if (opcode == 0x33) {		// R Instructions
 		switch (funct3) {
 		case 0:
 		{
@@ -84,6 +85,23 @@ void instDecExec(unsigned int instWord)
 		}
 		default:
 			std::cout << "\tUnkown R Instruction \n";
+		case 0: if (funct7 == 32) {
+			cout << "\tSUB\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		}
+			  else {
+			cout << "\tADD\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		}
+			  break;
+		case 1: cout << "\tSLL\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		case 2: cout << "\tSLT\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		case 3: cout << "\tSLTU\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		case 4: cout << "\tXOR\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		case 5: if (funct7 == 32) {
+			cout << "\tSRL\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
 		}
 	}
 	else if (opcode == 0x13) {	// I instructions
@@ -136,8 +154,16 @@ void instDecExec(unsigned int instWord)
 			std::cout << "\tSW\tx" << rs1 << ", x" << rs2 << ", " << std::hex << "0x" << (int)S_imm << "\n";
 			break;
 		}
+			  else {
+			cout << "\tSRA\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+		}
+			  break;
+		case 6: cout << "\tOR\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
+		case 7: cout << "\tAND\tx" << rd << ", x" << rs1 << ", x" << rs2 << "\n";
+			break;
 		default:
-			std::cout << "\tUnkown I Instruction \n";
+			cout << "\tUnkown R Instruction \n";
 		}
 	}
 	else if (opcode == 0b0000011) //Load instructions  (I TYPE)
@@ -205,8 +231,13 @@ void instDecExec(unsigned int instWord)
 			std::cout << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
 		}
 	}
+
+	else if (opcode == 0x6F)
+	{
+		cout << "\tJAL\tx" << rd << ", " << hex << "0x" << (int)J_imm << "\n";
+	}
 	else {
-		std::cout << "\tUnkown U Instruction \n";
+		cout << "\tUnkown J Instruction \n";
 
 	}
 
