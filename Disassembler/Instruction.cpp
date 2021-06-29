@@ -56,7 +56,7 @@ void Instruction::MakeInstruction()
 				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			}
-			case 4: 
+			case 4:{
 				unsigned int check;
 				check = (m_InstructionWord >> 5) & 3;
 				switch (check) {
@@ -75,13 +75,14 @@ void Instruction::MakeInstruction()
 				default:
 					ss << "\tUnkown R Instruction \n";
 				}
-			case 5:
+				}
+			case 5: {
 				J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
-					(((m_InstructionWord >> 8) & 1) << 10)| (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) << 11) |
+					(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) << 11) |
 					(((m_InstructionWord >> 15) & 1) ? 0xFFFFFC00 : 0x0);  //change here
 				ss << "\tJAL\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)J_imm << "\n";
 				break;
-			
+			}
 			
 			default:
 				ss << "\tUnknown 01 Compressed Instruction\n";
