@@ -61,7 +61,7 @@ void instDecExec(unsigned int instWord)
 	// Calculuating the B immediate 
 	// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
 	B_imm = (((instWord >> 7) & 1) << 11) | (((instWord >> 8) & 0xF) << 1) | (((instWord >> 24) & 0x3F) << 5) |
-		((instWord >> 31) ? 0xFFFFF800 : 0x0);
+		((instWord >> 31) ? 0xFFFFF000 : 0x0);
 	U_imm = (((instWord >> 12) & 0x000000FF) << 12);
 	J_imm = (((instWord >> 12) & 0x000000FF) << 12) | (((instWord >> 20) & 1) << 11) | (((instWord >> 21) & 0x000003FF) << 1) |
 		((instWord >> 31) ? 0xFFFFF800 : 0x0);
@@ -264,7 +264,9 @@ int main(int argc, char* argv[]) {
 				(((unsigned char)memory[pc + 2]) << 16) |
 				(((unsigned char)memory[pc + 3]) << 24);
 			// remove the following line once you have a complete simulator
-			if (pc == 40) break;			// stop when PC reached address 32
+			//if (pc == 40) break;			// stop when PC reached address 32
+			if (instWord == 0)
+				break;
 			//instDecExec(instWord);
 			instructions.push_back(new Instruction(instWord, &pc));
 		}

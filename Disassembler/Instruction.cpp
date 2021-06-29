@@ -27,7 +27,8 @@ void Instruction::MakeInstruction()
 		unsigned int instPC = *m_PC - 2;
 		opcode = m_InstructionWord & 0x3;
 		funct3 = (m_InstructionWord >> 13) & 0x7;
-		
+		I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFC0 : 0x0);
+
 		//Calculuate the opcode rd, rs1, rs2 and all of that 
 		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
 		addPrefix(instPC);
@@ -45,9 +46,16 @@ void Instruction::MakeInstruction()
 		{
 			switch (funct3)
 			{
-				rs1 = (m_InstructionWord >> 7) & 7;
-				rs2 = (m_InstructionWord >> 2) & 7;
-				rd = (m_InstructionWord >> 7) & 7;
+			rs1 = (m_InstructionWord >> 7) & 7;
+			rs2 = (m_InstructionWord >> 2) & 7;
+			rd = (m_InstructionWord >> 7) & 7;
+			case 0:
+			{
+				rs1 = (m_InstructionWord >> 7) & 0x1F;
+				rd = rs1;
+				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			}
 			case 4: 
 				unsigned int check;
 				check = (m_InstructionWord >> 5) & 3;
@@ -73,6 +81,7 @@ void Instruction::MakeInstruction()
 					(((m_InstructionWord >> 15) & 1) ? 0xFFFFFC00 : 0x0);  //change here
 				ss << "\tJAL\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)J_imm << "\n";
 				break;
+			
 			
 			default:
 				ss << "\tUnknown 01 Compressed Instruction\n";
@@ -113,6 +122,10 @@ void Instruction::MakeInstruction()
 			(((m_InstructionWord >> 31) & 1) ? 0xFFF00000 : 0x0);
 		// — inst[31] — inst[30:25] inst[24:21] inst[20]
 		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
+		// Calculuating the B immediate 
+		// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
+		B_imm = (((m_InstructionWord >> 7) & 1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 24) & 0x3F) << 5) |
+			((m_InstructionWord >> 31) ? 0xFFFFE000 : 0x0);
 
 		S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) |((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
 		U_imm = (((m_InstructionWord >> 12)) << 12);
@@ -158,10 +171,94 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0x13) {	// I instructions
 			switch (funct3) {
-			case 0: ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			case 0:
+				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b010: // SLTI
+				ss << "\tSLTI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b011: // SLTIU
+				ss << "\tSLTIU\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b100: // XORI
+				ss << "\tXORI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b110: // ORI
+				ss << "\tORI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b111: // ANDI
+				ss << "\tANDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b001: //SLLI
+			{
+				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
+				ss << "\tSLLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				break;
+			}
+			case 0b101:
+			{
+				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
+				unsigned int lastBits = (m_InstructionWord >> 25) & 0b1111111;
+				if (lastBits == 0)
+					// SRLI
+					ss << "\tSRLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				else
+					//SRAI
+					ss << "\tSRAI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				break;
+			}
+			}
+		}
+		else if (opcode == 0b0000011) //Load instructions  (I TYPE)
+		{
+			switch (funct3) {
+			case 0b000: //LB
+				ss << "\tLB\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b001: //LH
+				ss << "\tLH\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b010: //LW
+				ss << "\tLW\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b100: // LBU
+				ss << "\tLBU\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b101: // LHU
+				ss << "\tLHU\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
 				break;
 			default:
-				ss << "\tUnkown I Instruction \n";
+				ss << "\tUnkown Load Instruciton\n";
+			}
+		}
+		else if (opcode == 0b1100111) //JALR instruction
+		{
+			ss << "\tJALR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		}
+		else if (opcode == 0b1100011)  // B-Type instructions.
+		{
+			switch (funct3)
+			{
+			case 0b000: //BEQ
+				ss << "\tBEQ\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b001: //BNE
+				ss << "\tBNE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b100: //BLT
+				ss << "\tBLT\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b101: //BGE
+				ss << "\tBGE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b110: //BLTU
+				ss << "\tBLTU\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b111: //BGEU
+				ss << "\tBGEU\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			default:
+				ss << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
 			}
 		}
 		else if (opcode == 0x6F)  // J instructions
@@ -193,7 +290,8 @@ void Instruction::MakeInstruction()
 		{
 			ss << "\tAUIPC\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
-		else {
+		else 
+		{
 			ss << "\tUnkown Instruction \n";
 		}
 
