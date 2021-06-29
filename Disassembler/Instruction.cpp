@@ -44,11 +44,13 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0b01)
 		{
-			switch (funct3)
-			{
+
 			rs1 = (m_InstructionWord >> 7) & 7;
 			rs2 = (m_InstructionWord >> 2) & 7;
 			rd = (m_InstructionWord >> 7) & 7;
+			switch (funct3)
+			{
+
 			case 0:
 			{
 				rs1 = (m_InstructionWord >> 7) & 0x1F;
@@ -90,6 +92,9 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0b10)
 		{
+			rs1 = (m_InstructionWord >> 7) & 7;
+			rs2 = (m_InstructionWord >> 2) & 7;
+			rd = (m_InstructionWord >> 7) & 7;
 			switch (funct3)
 			{
 			case 4: 
@@ -132,8 +137,11 @@ void Instruction::MakeInstruction()
 		U_imm = (((m_InstructionWord >> 12)) << 12);
 		addPrefix(instPC);
 		std::stringstream ss;
-
-		if (opcode == 0x33) {// R Instructions
+		if (opcode == 0b1110011)
+		{
+			ss << "\tECALL\t" << "\n";
+		}
+		else if (opcode == 0x33) {// R Instructions
 			funct7 = (m_InstructionWord >> 24) & 0x0000007F;
 			switch (funct3) {
 			case 0: if (funct7 == 32) {
