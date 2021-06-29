@@ -82,7 +82,8 @@ void Instruction::MakeInstruction()
 
 		// — inst[31] — inst[30:25] inst[24:21] inst[20]
 		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
-
+		S_imm = (((m_InstructionWord >> 7) & 1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 24) & 0x3F) << 5) |
+			((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
 		addPrefix(instPC);
 		std::stringstream ss;
 
@@ -107,6 +108,31 @@ void Instruction::MakeInstruction()
 			default:
 				ss << "\tUnkown I Instruction \n";
 			}
+		}
+		else if (opcode == 0b0100011)// S instruction
+		{
+			switch (funct3)
+			{
+			case 0b000://SB
+				ss << "\tSB\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				break;
+			case 0b001: //SH
+				ss << "\tSH\t" << getAPIName(rs1) << ", x" << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				break;
+			case 0b010: //SW
+				ss << "\tSW\t" << getAPIName(rs1) << ", x" << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				break;
+			default:
+				ss << "\tUnknown S Instruction\n";
+			}
+		}
+		else if (opcode == 0x37)// U type
+		{
+			ss << "\tLUI\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
+		}
+		else if (opcode == 0x6F)
+		{
+			ss << "\tAUIPC\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
 		else {
 			ss << "\tUnkown Instruction \n";
