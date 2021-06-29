@@ -84,7 +84,7 @@ void Instruction::MakeInstruction()
 		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
 		S_imm = (((m_InstructionWord >> 7) & 1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 24) & 0x3F) << 5) |
 			((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
-		U_imm = (((m_InstructionWord >> 12) & 0x000000FF) << 12);
+		U_imm = (((m_InstructionWord >> 12)) << 12);
 		addPrefix(instPC);
 		std::stringstream ss;
 
