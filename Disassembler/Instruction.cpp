@@ -82,6 +82,10 @@ void Instruction::MakeInstruction()
 
 		// — inst[31] — inst[30:25] inst[24:21] inst[20]
 		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
+		// Calculuating the B immediate 
+		// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
+		B_imm = (((m_InstructionWord >> 7) & 1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 24) & 0x3F) << 5) |
+			((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
 
 		addPrefix(instPC);
 		std::stringstream ss;
@@ -102,13 +106,98 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0x13) {	// I instructions
 			switch (funct3) {
-			case 0: ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			case 0:
+				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
-			default:
-				ss << "\tUnkown I Instruction \n";
+			case 0b010: // SLTI
+				ss << "\tSLTI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b011: // SLTIU
+				ss << "\tSLTIU\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b100: // XORI
+				ss << "\tXORI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b110: // ORI
+				ss << "\tORI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b111: // ANDI
+				ss << "\tANDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			case 0b001: //SLLI
+			{
+				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
+				ss << "\tSLLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				break;
+			}
+			case 0b101:
+			{
+				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
+				unsigned int lastBits = (m_InstructionWord >> 25) & 0b1111111;
+				if (lastBits == 0)
+					// SRLI
+					ss << "\tSRLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				else
+					//SRAI
+					ss << "\tSRAI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				break;
+			}
 			}
 		}
-		else {
+		else if (opcode == 0b0000011) //Load instructions  (I TYPE)
+		{
+			switch (funct3) {
+			case 0b000: //LB
+				ss << "\tLB\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b001: //LH
+				ss << "\tLH\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b010: //LW
+				ss << "\tLW\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b100: // LBU
+				ss << "\tLBU\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			case 0b101: // LHU
+				ss << "\tLHU\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				break;
+			default:
+				ss << "\tUnkown Load Instruciton\n";
+			}
+		}
+		else if (opcode == 0b1100111) //JALR instruction
+		{
+			ss << "\tJALR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		}
+		else if (opcode == 0b1100011)  // B-Type instructions.
+		{
+			switch (funct3)
+			{
+			case 0b000: //BEQ
+				ss << "\tBEQ\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b001: //BNE
+				ss << "\tBNE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b100: //BLT
+				ss << "\tBLT\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b101: //BGE
+				ss << "\tBGE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b110: //BLTU
+				ss << "\tBLTU\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			case 0b111: //BGEU
+				ss << "\tBGEU\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				break;
+			default:
+				ss << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
+			}
+		}
+		else 
+		{
 			ss << "\tUnkown Instruction \n";
 		}
 
