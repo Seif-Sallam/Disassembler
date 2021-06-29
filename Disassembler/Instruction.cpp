@@ -92,7 +92,7 @@ void Instruction::MakeInstruction()
 		// Calculuating the B immediate 
 		// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
 		B_imm = (((m_InstructionWord >> 7) & 1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 24) & 0x3F) << 5) |
-			((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
+			((m_InstructionWord >> 31) ? 0xFFFFE000 : 0x0);
 
 		addPrefix(instPC);
 		std::stringstream ss;
