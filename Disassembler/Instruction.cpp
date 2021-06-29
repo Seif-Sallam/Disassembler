@@ -27,6 +27,7 @@ void Instruction::MakeInstruction()
 		unsigned int instPC = *m_PC - 2;
 		opcode = m_InstructionWord & 0x3;
 		funct3 = (m_InstructionWord >> 13) & 0x7;
+		I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFC0 : 0x0);
 
 		//Calculuate the opcode rd, rs1, rs2 and all of that 
 		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
@@ -45,7 +46,13 @@ void Instruction::MakeInstruction()
 		{
 			switch (funct3)
 			{
-
+			case 0: 
+			{
+				rs1 = (m_InstructionWord >> 7) & 0x1F;
+				rd = rs1;
+				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				break;
+			}
 			default:
 				ss << "\tUnknown 01 Compressed Instruction\n";
 			}
