@@ -7,12 +7,19 @@ Instruction::Instruction(unsigned int instructionWord, unsigned int* pc)
 {
 	unsigned int checkCompression = m_InstructionWord & 0x3;
 	m_IsCompressed = (checkCompression != 0x3);
+	m_IsBranchOrJumpInst = false;
 	if (m_PC == nullptr)
 	{
 		std::cout << "PC IS NULLPTR\n";
 		exit(1);
 	}
 	MakeInstruction();
+}
+
+void Instruction::AddJumpLabel(const std::string& labelName)
+{
+	if(m_IsBranchOrJumpInst)
+		m_LabelName = labelName;
 }
 
 void Instruction::MakeInstruction()
@@ -28,7 +35,6 @@ void Instruction::MakeInstruction()
 		opcode = m_InstructionWord & 0x3;
 		funct3 = (m_InstructionWord >> 13) & 0x7;
 
-
 		//Calculuate the opcode rd, rs1, rs2 and all of that 
 		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
 		addPrefix(instPC);
@@ -43,7 +49,8 @@ void Instruction::MakeInstruction()
 				I_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) ? 0xFFFFFFC0 : 0x0);
 				rs1 = (m_InstructionWord >> 7) & 0x7;
 				rd = (m_InstructionWord >> 2) & 0x7;
-				ss << "\tLW\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x"<< (int)I_imm << "\n";
+				ss << "\tLW\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x"<< (int)I_imm << "\n";
+				break;
 			}
 			default:
 				ss << "\tUnknown 00 Compressed Instruction\n";
@@ -56,13 +63,12 @@ void Instruction::MakeInstruction()
 			rd = (m_InstructionWord >> 7) & 7;
 			switch (funct3)
 			{
-
 			case 0:
 			{
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
 				rs1 = (m_InstructionWord >> 7) & 0x1F;
 				rd = rs1;
-				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tADDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			}
 			case 1: 
@@ -70,7 +76,9 @@ void Instruction::MakeInstruction()
 				J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
 					(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) << 11) |
 					(((m_InstructionWord >> 15) & 1) ? 0xFFFFFC00 : 0x0);  //change here
-				ss << "\tJAL\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)J_imm << "\n";
+				ss << "\tJAL\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)J_imm;
+				m_IsBranchOrJumpInst = true;
+				m_Offset = (int)J_imm;
 				break;
 			}
 			case 4: {
@@ -81,30 +89,32 @@ void Instruction::MakeInstruction()
 					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
 					rs1 = (m_InstructionWord >> 7) & 0x3;
 					rd = rs1;
-					ss << "\tSRLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+					ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+					break;
 				}
 				case 0x2:
 				{
 					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFC0 : 0x0);
 					rs1 = (m_InstructionWord >> 7) & 0x3;
 					rd = rs1;
-					ss << "\tANDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+					ss << "\tANDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+					break;
 				}
 				case 0x3: {
 					unsigned int check;
 					check = (m_InstructionWord >> 5) & 3;
 					switch (check) {
 					case 0:
-						ss << "\tSUB\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
+						ss << "\tSUB\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n"; //change here
 						break;
 					case 1:
-						ss << "\tXOR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
+						ss << "\tXOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n"; //change here
 						break;
 					case 2:
-						ss << "\tOR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
+						ss << "\tOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n"; //change here
 						break;
 					case 3:
-						ss << "\tAND\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
+						ss << "\tAND\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n"; //change here
 						break;
 					default:
 						ss << "\tUnkown R Instruction \n";
@@ -119,7 +129,10 @@ void Instruction::MakeInstruction()
 				rs1 = (m_InstructionWord >> 7) & 0x7;
 				rs2 = 0;
 
-				ss << "\tBEQ\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBEQ\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+				m_IsBranchOrJumpInst = true;
+				m_Offset = (int)B_imm;
+				break;
 			}
 			case 0b111:
 			{
@@ -127,8 +140,10 @@ void Instruction::MakeInstruction()
 					| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF80 : 0x0);
 				rs1 = (m_InstructionWord >> 7) & 0x7;
 				rs2 = 0;
-
-				ss << "\tBNE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBNE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+				m_IsBranchOrJumpInst = true;
+				m_Offset = (int)B_imm;
+				break;
 			}
 			default:
 				ss << "\tUnknown 01 Compressed Instruction\n";
@@ -144,7 +159,8 @@ void Instruction::MakeInstruction()
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
 				rs1 = (m_InstructionWord >> 7) & 7;
 				rd = rs1;
-				ss << "\tSLLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ",x" << (int)I_imm << "\n";
+				ss << "\tSLLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ",x" << (int)I_imm << "\n";
+				break;
 			}
 			case 0b100: 
 			{
@@ -153,12 +169,14 @@ void Instruction::MakeInstruction()
 				rd = (m_InstructionWord >> 7) & 0x1F;
 				if (((m_InstructionWord >> 2) & 0x1F) != 0x0)
 				{
-					ss << "\tADD\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+					ss << "\tADD\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				}
 				else 
 				{
-					ss << "\tJALR\t" << getAPIName(0x0) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+					ss << "\tJALR\t" << getABIName(0x0) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				}
+				break;
 			}
 			default:
 				ss << "\tUnknown 01 Compressed Instruction\n";
@@ -178,7 +196,6 @@ void Instruction::MakeInstruction()
 		unsigned int address;
 
 		unsigned int instPC = *m_PC - 4;
-
 		opcode = m_InstructionWord & 0x0000007F;
 		rd = (m_InstructionWord >> 7) & 0x0000001F;
 		funct3 = (m_InstructionWord >> 12) & 0x00000007;
@@ -205,34 +222,34 @@ void Instruction::MakeInstruction()
 			funct7 = (m_InstructionWord >> 24) & 0x0000007F;
 			switch (funct3) {
 			case 0: if (funct7 == 32) {
-				ss << "\tSUB\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+				ss << "\tSUB\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 			}
 				  else {
-				ss << "\tADD\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+				ss << "\tADD\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 			}
 				  break;
-			case 1: ss << "\tSLL\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+			case 1: ss << "\tSLL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				break;
-			case 2: ss << "\tSLT\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+			case 2: ss << "\tSLT\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				break;
-			case 3: ss << "\tSLTU\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+			case 3: ss << "\tSLTU\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				break;
-			case 4: ss << "\tXOR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+			case 4: ss << "\tXOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				break;
 			case 5: {
 				if (funct7 == 32) {
-					ss << "\tSRL\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+					ss << "\tSRL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				}
 				else {
-					ss << "\tSRA\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+					ss << "\tSRA\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				}
 				break;
 			}
 			case 6:
-				ss << "\tOR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+				ss << "\tOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				break;
 			case 7:
-				ss << "\tAND\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
+				ss << "\tAND\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
 				break;
 			default:
 				ss << "\tUnkown R Instruction \n";
@@ -241,27 +258,27 @@ void Instruction::MakeInstruction()
 		else if (opcode == 0x13) {	// I instructions
 			switch (funct3) {
 			case 0:
-				ss << "\tADDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tADDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			case 0b010: // SLTI
-				ss << "\tSLTI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tSLTI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			case 0b011: // SLTIU
-				ss << "\tSLTIU\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tSLTIU\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			case 0b100: // XORI
-				ss << "\tXORI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tXORI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			case 0b110: // ORI
-				ss << "\tORI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tORI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			case 0b111: // ANDI
-				ss << "\tANDI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+				ss << "\tANDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
 			case 0b001: //SLLI
 			{
 				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
-				ss << "\tSLLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+				ss << "\tSLLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
 				break;
 			}
 			case 0b101:
@@ -270,10 +287,10 @@ void Instruction::MakeInstruction()
 				unsigned int lastBits = (m_InstructionWord >> 25) & 0b1111111;
 				if (lastBits == 0)
 					// SRLI
-					ss << "\tSRLI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+					ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
 				else
 					//SRAI
-					ss << "\tSRAI\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+					ss << "\tSRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
 				break;
 			}
 			}
@@ -282,19 +299,19 @@ void Instruction::MakeInstruction()
 		{
 			switch (funct3) {
 			case 0b000: //LB
-				ss << "\tLB\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				ss << "\tLB\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
 				break;
 			case 0b001: //LH
-				ss << "\tLH\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				ss << "\tLH\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
 				break;
 			case 0b010: //LW
-				ss << "\tLW\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				ss << "\tLW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
 				break;
 			case 0b100: // LBU
-				ss << "\tLBU\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				ss << "\tLBU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
 				break;
 			case 0b101: // LHU
-				ss << "\tLHU\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getAPIName(rs1) << "\n";
+				ss << "\tLHU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
 				break;
 			default:
 				ss << "\tUnkown Load Instruciton\n";
@@ -302,29 +319,31 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0b1100111) //JALR instruction
 		{
-			ss << "\tJALR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			ss << "\tJALR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 		}
 		else if (opcode == 0b1100011)  // B-Type instructions.
 		{
+			m_IsBranchOrJumpInst = true;
+			m_Offset = (int)B_imm;
 			switch (funct3)
 			{
 			case 0b000: //BEQ
-				ss << "\tBEQ\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBEQ\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
 				break;
 			case 0b001: //BNE
-				ss << "\tBNE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBNE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
 				break;
 			case 0b100: //BLT
-				ss << "\tBLT\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBLT\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
 				break;
 			case 0b101: //BGE
-				ss << "\tBGE\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBGE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
 				break;
 			case 0b110: //BLTU
-				ss << "\tBLTU\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBLTU\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
 				break;
 			case 0b111: //BGEU
-				ss << "\tBGEU\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)B_imm << "\n";
+				ss << "\tBGEU\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
 				break;
 			default:
 				ss << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
@@ -332,20 +351,22 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0x6F)  // J instructions
 		{
-			ss << "\tJAL\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)J_imm << "\n";
+		ss << "\tJAL\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)J_imm;
+			m_IsBranchOrJumpInst = true;
+			m_Offset = (int)J_imm;
 		}
 		else if (opcode == 0b0100011)// S instruction
 		{
 			switch (funct3)
 			{
 			case 0b000://SB
-				ss << "\tSB\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				ss << "\tSB\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
 				break;
 			case 0b001: //SH
-				ss << "\tSH\t" << getAPIName(rs1) << ", x" << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				ss << "\tSH\t" << getABIName(rs1) << ", x" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
 				break;
 			case 0b010: //SW
-				ss << "\tSW\t" << getAPIName(rs1) << ", x" << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				ss << "\tSW\t" << getABIName(rs1) << ", x" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
 				break;
 			default:
 				ss << "\tUnknown S Instruction\n";
@@ -353,11 +374,11 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0x37)// U type
 		{
-			ss << "\tLUI\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
+			ss << "\tLUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
 		else if (opcode == 0x6F)
 		{
-			ss << "\tAUIPC\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
+			ss << "\tAUIPC\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
 		else 
 		{
@@ -367,8 +388,9 @@ void Instruction::MakeInstruction()
 		m_InstructionStr += ss.str();
 	}
 }
-void Instruction::AddLabel(const std::string& labelName)
+void Instruction::AddLabel(std::string labelName)
 {
+	labelName += ":";
 	for (int i = 0; i < labelName.size() + 1; i++) {
 		if(i < labelName.size())
 			m_InstructionStr.insert(m_InstructionStr.begin() + i, labelName[i]);
@@ -382,7 +404,7 @@ void Instruction:: addPrefix(unsigned int instA) {
 	m_InstructionStr = ss.str();
 }
 
-std::string Instruction::getAPIName(unsigned int regNumber)
+std::string Instruction::getABIName(unsigned int regNumber)
 {
 	switch (regNumber)
 	{
@@ -487,6 +509,13 @@ std::string Instruction::getAPIName(unsigned int regNumber)
 
 std::ostream& operator<<(std::ostream& stream, Instruction& instruction)
 {
-	stream << instruction.GetInstructionStr();
+	if (instruction.IsBranchOrJumpInst())
+	{
+		stream << instruction.GetInstructionStr() << " <" << instruction.m_LabelName << ">\n";
+	}
+	else
+	{
+		stream << instruction.GetInstructionStr();
+	}
 	return stream;
 }

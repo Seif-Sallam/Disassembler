@@ -45,6 +45,50 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	else emitError("Cannot access input file\n");
+	for (int i = 0; i < instructions.size(); i++)
+	{
+		Instruction& inst = *instructions[i];
+		
+		if (inst.IsBranchOrJumpInst())
+		{
+			int j = i;
+			int offset = inst.GetOffset();
+			while (offset != 0)
+			{
+				if (instructions[j]->IsCompressed())
+				{
+					if (offset > 0)
+					{
+						j++;
+						offset -= 2;
+					}
+					else
+					{
+						j--;
+						offset += 2;
+					}
+				}
+				else
+				{
+					if (offset > 0)
+					{
+						j++;
+						offset -= 4;
+					}
+					else
+					{
+						j--;
+						offset += 4;
+					}
+				}
+			}
+			int labelNum = instructions[i]->GetNextLabelNumber();
+			std::string labelName = "L" + std::to_string(labelNum);
+			instructions[j]->AddLabel(labelName);
+			instructions[i]->AddJumpLabel(labelName);
+		}
+
+	}
 
 	for (auto& i : instructions)
 	{
