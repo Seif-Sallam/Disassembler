@@ -27,7 +27,8 @@ void Instruction::MakeInstruction()
 		unsigned int instPC = *m_PC - 2;
 		opcode = m_InstructionWord & 0x3;
 		funct3 = (m_InstructionWord >> 13) & 0x7;
-		
+		S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) | ((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
+		U_imm = (((m_InstructionWord >> 12)) << 12);
 		//Calculuate the opcode rd, rs1, rs2 and all of that 
 		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
 		addPrefix(instPC);
@@ -37,43 +38,33 @@ void Instruction::MakeInstruction()
 		{
 			switch (funct3)
 			{
+			case 0:
+
+				rs2 = (m_InstructionWord >> 2) & 0x1F;
+				rs1 = (m_InstructionWord >> 7) & 0x1F;
+
+				ss << "\tSQ\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				break;
+			case 1:
+				ss << "\tSW\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				break;
+			case 2:
+				ss << "\tSD\t" << getAPIName(rs1) << ", " << getAPIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				break;
 			default:
 				ss << "\tUnknown 00 Compressed Instruction\n";
 			}
 		}
-		else if (opcode == 0b01)
+		else if (opcode == 0b10)
 		{
 			switch (funct3)
 			{
-				rs1 = (m_InstructionWord >> 7) & 7;
-				rs2 = (m_InstructionWord >> 2) & 7;
-				rd = (m_InstructionWord >> 7) & 7;
-			case 4: 
-				unsigned int check;
-				check = (m_InstructionWord >> 5) & 3;
-				switch (check) {
-				case 0:
-					ss << "\tSUB\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
+			case 0:
+				{
+					rd = (m_InstructionWord >> 7) & 0x1F;
+					ss << "\tLUI\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 					break;
-				case 1:
-					ss << "\tXOR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
-					break;
-				case 2:
-					ss << "\tOR\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
-					break;
-				case 3:
-					ss << "\tAND\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n"; //change here
-					break;
-				default:
-					ss << "\tUnkown R Instruction \n";
 				}
-			case 5:
-				J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
-					(((m_InstructionWord >> 8) & 1) << 10)| (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) << 11) |
-					(((m_InstructionWord >> 15) & 1) ? 0xFFFFFC00 : 0x0);  //change here
-				ss << "\tJAL\t" << getAPIName(rd) << ", " << std::hex << "0x" << (int)J_imm << "\n";
-				break;
-			
 			default:
 				ss << "\tUnknown 01 Compressed Instruction\n";
 			}
@@ -82,17 +73,17 @@ void Instruction::MakeInstruction()
 		{
 			switch (funct3)
 			{
-			case 4: 
 
-				ss << "\tADD\t" << getAPIName(rd) << ", " << getAPIName(rs1) << ", " << getAPIName(rs2) << "\n";
 			default:
-				ss << "\tUnknown 01 Compressed Instruction\n";
+				ss << "\tUnknown 10 Compressed Instruction\n";
 			}
 		}
 		else
 		{
 			ss << "\t Unknown Compressed Instruction\n";
 		}
+
+
 		m_InstructionStr += ss.str();
 	}
 	else
