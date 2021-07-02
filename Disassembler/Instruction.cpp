@@ -1,45 +1,56 @@
 #include "Instruction.h"
-
+//Initalization of the label counter to be 0
 unsigned int Instruction::m_LabelCounter = 0;
 
 Instruction::Instruction(unsigned int instructionWord, unsigned int* pc)
-	: m_InstructionStr(""), m_InstructionWord(instructionWord), m_PC(pc)
+	: m_PC(pc), m_InstructionStr(""), m_InstructionWord(instructionWord)
 {
 	unsigned int checkCompression = m_InstructionWord & 0x3;
+	//The instruction will be compressed if and only if the first two bits are NOT equal to 3
 	m_IsCompressed = (checkCompression != 0x3);
 	m_IsBranchOrJumpInst = false;
+
+	// the program counter MUST be initalized (this is for debugging)
 	if (m_PC == nullptr)
 	{
 		std::cout << "PC IS NULLPTR\n";
 		exit(1);
 	}
+
+	// Making the instruction ready
 	MakeInstruction();
 }
 
 void Instruction::AddJumpLabel(const std::string& labelName)
 {
-	if(m_IsBranchOrJumpInst)
-		m_LabelName = labelName;
+	//We know explicitly that branch and jump instructions do NOT have a new line in the end just for this purpose
+	if (m_IsBranchOrJumpInst)
+		m_InstructionStr += " <" + labelName + "> \n";
 }
 
 void Instruction::MakeInstruction()
 {
 	if (m_IsCompressed)
 	{
+		//Increasing the program counter by 2 (size of the instruction word)
 		*m_PC += 2;
+
+		//Declaration of the variables used in the instruction
 		unsigned int rd, rs1, rs2, funct3, opcode;
 		unsigned int I_imm, S_imm, B_imm, U_imm, J_imm;
-		unsigned int address;
 
+		//instruction Address
 		unsigned int instPC = *m_PC - 2;
+
+		//The most common two components of the instruction
 		opcode = m_InstructionWord & 0x3;
 		funct3 = (m_InstructionWord >> 13) & 0x7;
 
-		//Calculuate the opcode rd, rs1, rs2 and all of that 
-		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
+		//Adding the prefix of the instruction
 		addPrefix(instPC);
+
+		//We used String Streams because it will allow us to use io manipulator functions and flags easily
 		std::stringstream ss;
-		U_imm = (((m_InstructionWord >> 2) & 0x1F) << 12) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFF0000: 0x0);
 
 		//Put in your switch statement.
 		if (opcode == 0b00)
@@ -96,6 +107,7 @@ void Instruction::MakeInstruction()
 			case 0b011:
 			{
 				rd = (m_InstructionWord >> 7) & 0x1F;
+				U_imm = (((m_InstructionWord >> 2) & 0x1F) << 12) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFF0000 : 0x0);
 				ss << "\tLUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 			}
 			case 4: {
@@ -158,8 +170,10 @@ void Instruction::MakeInstruction()
 			}
 			case 0b110:
 			{
+				//Calculating the B immediate by a sequence of shifting, ANDing and ORing.
 				B_imm = (((m_InstructionWord >> 3) & 0x3) << 1) | (((m_InstructionWord >> 10) & 0x3) << 3) | (((m_InstructionWord >> 2) & 0x1) << 5)
 					| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF80 : 0x0);
+				//According to the instruction format
 				rs1 = (m_InstructionWord >> 7) & 0x7;
 				rs2 = 0;
 
@@ -170,8 +184,10 @@ void Instruction::MakeInstruction()
 			}
 			case 0b111:
 			{
+				//Calculating the B immediate by a sequence of shifting, ANDing and ORing.
 				B_imm = (((m_InstructionWord >> 3) & 0x3) << 1) | (((m_InstructionWord >> 10) & 0x3) << 3) | (((m_InstructionWord >> 2) & 0x1) << 5)
 					| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF80 : 0x0);
+				//According to the instruction format
 				rs1 = (m_InstructionWord >> 7) & 0x7;
 				rs2 = 0;
 				ss << "\tBNE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
@@ -188,10 +204,11 @@ void Instruction::MakeInstruction()
 			
 			switch (funct3)
 			{
-
 			case 0b000:
 			{
+				//Calculating the I immediate by a sequence of shifting, ANDing and ORing.
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
 				rs1 = (m_InstructionWord >> 7) & 7;
 				rd = rs1;
 				ss << "\tSLLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ",x" << (int)I_imm << "\n";
@@ -199,7 +216,7 @@ void Instruction::MakeInstruction()
 			}
 			case 0b100: 
 			{
-				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in the compressed instructions.
+				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
 				rs1 = (m_InstructionWord >> 7) & 0x1F;
 				rs2 = (m_InstructionWord >> 2) & 0x1F;
 				rd = (m_InstructionWord >> 7) & 0x1F;
@@ -212,6 +229,7 @@ void Instruction::MakeInstruction()
 				}
 				else 
 				{
+					//I imm is different in the JALR instruction than the other I-Type instructions
 					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
 					ss << "\tJALR\t" << getABIName(0x0) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				}
@@ -230,10 +248,10 @@ void Instruction::MakeInstruction()
 	//Otherwise if the opcode is has 11 in its beginning, then the instruction is a 32-bit instruction word and not compressed.
 	else
 	{
+		// Non compressed instructions are 4 bytes so we increase the program counter by 4
 		*m_PC += 4;
 		unsigned int rd, rs1, rs2, funct3, funct7, opcode;
 		unsigned int I_imm, S_imm, B_imm, U_imm, J_imm;
-		unsigned int address;
 
 		unsigned int instPC = *m_PC - 4;
 		//We obtain the opcode, rd, funct3, rs1, and rs2 by using shifts on the instruction word.
@@ -242,21 +260,27 @@ void Instruction::MakeInstruction()
 		funct3 = (m_InstructionWord >> 12) & 0x00000007;
 		rs1 = (m_InstructionWord >> 15) & 0x0000001F;
 		rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+
 		//We calculate the J instruction immediate by using shifts on the instruction word and storing each bit
 		//in its correct place in the immediate.
 		J_imm = (((m_InstructionWord >> 12) & 0x000000FF) << 12) | (((m_InstructionWord >> 20) & 1) << 11) | (((m_InstructionWord >> 21) & 0x000003FF) << 1) |
 			(((m_InstructionWord >> 31) & 1) ? 0xFFF00000 : 0x0);
-		// — inst[31] — inst[30:25] inst[24:21] inst[20]
+		// — inst[31] — inst[30:25] inst[24:21] inst[20] (provided in the skeleton code)
 		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
 		// Calculuating the B immediate 
-		// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
 		B_imm = (((m_InstructionWord >> 7) & 0x1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 25) & 0x3F) << 5) |
 			((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
-		
+		// Calculuating the S immediate 
 		S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) |((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
+		// Calculuating the U immediate 
 		U_imm = (((m_InstructionWord >> 12)) << 12);
+
+		//Adding teh prefix to the instruction
 		addPrefix(instPC);
 		std::stringstream ss;
+
+		// The only explicit instruction that has nothing but this Opcode 
+		// (EBREAK has the same opcode but one differnet bit in the end, but it was not required to add it)
 		if (opcode == 0b1110011)
 		{
 			ss << "\tECALL\t" << "\n";
@@ -266,13 +290,14 @@ void Instruction::MakeInstruction()
 			funct7 = (m_InstructionWord >> 24) & 0x0000007F;
 			switch (funct3) {
 				//Since the ADD and SUB instructions share the same funct3 number (0), then funct7 is used to distinct between them
-			case 0: if (funct7 == 32) {
-				//Depending on the funct7 number, we displaying the SUB and ADD instructions using rd, rs1, and rs2 obtained above.
-				ss << "\tSUB\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-			}
-				  else {
-				ss << "\tADD\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-			}
+			case 0: 
+				if (funct7 == 32) {
+					//Depending on the funct7 number, we displaying the SUB and ADD instructions using rd, rs1, and rs2 obtained above.
+					ss << "\tSUB\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+				}
+				else {
+					ss << "\tADD\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+				}
 				  break;
 				//Displaying the rest of the R instructions based on the funct3 number using the rd, rs1, and rs2 obtained above from the instruction word
 			case 1: ss << "\tSLL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
@@ -337,12 +362,14 @@ void Instruction::MakeInstruction()
 				unsigned int lastBits = (m_InstructionWord >> 25) & 0b1111111;
 				if (lastBits == 0)
 					// SRLI
-					ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+					ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << shiftAmount << "\n";
 				else
 					//SRAI
-					ss << "\tSRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+					ss << "\tSRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << shiftAmount << "\n";
 				break;
 			}
+			default:
+				ss << "Unknown I Instruction\n";
 			}
 		}
 		else if (opcode == 0b0000011) //Load instructions  (I TYPE)
@@ -437,12 +464,16 @@ void Instruction::MakeInstruction()
 			ss << "\tUnkown Instruction \n";
 		}
 
-		m_InstructionStr += ss.str();
+		m_InstructionStr += ss.str(); // we eventually turns the string stream to a string
 	}
 }
+
 void Instruction::AddLabel(std::string labelName)
 {
-	labelName += ":";
+	// since we were appending to the labelName variable a character, we have take it as a copy
+	labelName += ":"; 
+	
+	//adding the labelName to the beginning of the instruction
 	for (int i = 0; i < labelName.size() + 1; i++) {
 		if(i < labelName.size())
 			m_InstructionStr.insert(m_InstructionStr.begin() + i, labelName[i]);
@@ -450,6 +481,7 @@ void Instruction::AddLabel(std::string labelName)
 			m_InstructionStr.insert(m_InstructionStr.begin() + i, '\n');
 	}
 }
+
 void Instruction:: addPrefix(unsigned int instA) {
 	std::stringstream ss;
 	ss << "0x" << std::hex << std::setfill('0') << std::setw(8) << instA << "\t0x" << std::setw(8) << m_InstructionWord;
@@ -556,18 +588,13 @@ std::string Instruction::getABIName(unsigned int regNumber)
 	case 31:
 		return "t6";
 		break;
+	default:
+		return "UNKOWN REGISTER";
 	}
 }
 
 std::ostream& operator<<(std::ostream& stream, Instruction& instruction)
 {
-	if (instruction.IsBranchOrJumpInst())
-	{
-		stream << instruction.GetInstructionStr() << " <" << instruction.m_LabelName << ">\n";
-	}
-	else
-	{
-		stream << instruction.GetInstructionStr();
-	}
+	stream << instruction.GetInstructionStr();
 	return stream;
 }
