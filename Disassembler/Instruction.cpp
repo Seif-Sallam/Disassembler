@@ -39,11 +39,20 @@ void Instruction::MakeInstruction()
 		// I cannot write it in the very beginning because it varies from one instruction to another (See the table)
 		addPrefix(instPC);
 		std::stringstream ss;
+		U_imm = (((m_InstructionWord >> 2) & 0x1F) << 12) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFF0000: 0x0);
+
 		//Put in your switch statement.
 		if (opcode == 0b00)
 		{
 			switch (funct3)
 			{
+			case 0b110: {
+				S_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) ? 0xFFFFFFC0 : 0x0);
+				rs1 = (m_InstructionWord >> 7) & 0x7;
+				rd = (m_InstructionWord >> 2) & 0x7;
+				ss << "\tSW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
+			}
+				break;
 			case 0b010:
 			{
 				I_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) ? 0xFFFFFFC0 : 0x0);
@@ -58,9 +67,6 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0b01)
 		{
-			rs1 = (m_InstructionWord >> 7) & 7;
-			rs2 = (m_InstructionWord >> 2) & 7;
-			rd = (m_InstructionWord >> 7) & 7;
 			switch (funct3)
 			{
 			case 0:
@@ -76,21 +82,36 @@ void Instruction::MakeInstruction()
 				J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
 					(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) << 11) |
 					(((m_InstructionWord >> 15) & 1) ? 0xFFFFFC00 : 0x0);  //change here
+				rd = (m_InstructionWord >> 7) & 7;
 				ss << "\tJAL\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)J_imm;
 				m_IsBranchOrJumpInst = true;
 				m_Offset = (int)J_imm;
 				break;
+			}
+			case 0b011:
+			{
+				rd = (m_InstructionWord >> 7) & 0x1F;
+				ss << "\tLUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 			}
 			case 4: {
 				unsigned int checkingInt = (m_InstructionWord >> 10) & 0x3;
 				switch (checkingInt)
 				{
 				case 0x0: {	
+
 					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
 					rs1 = (m_InstructionWord >> 7) & 0x3;
 					rd = rs1;
 					ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 					break;
+				}
+				case 0x1:
+				{
+					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+					rs1 = (m_InstructionWord >> 7) & 0x3;
+					rd = rs1;
+					ss << "\tSRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+
 				}
 				case 0x2:
 				{
@@ -101,6 +122,9 @@ void Instruction::MakeInstruction()
 					break;
 				}
 				case 0x3: {
+					rs1 = (m_InstructionWord >> 7) & 7;
+					rs2 = (m_InstructionWord >> 2) & 7;
+					rd = (m_InstructionWord >> 7) & 7;
 					unsigned int check;
 					check = (m_InstructionWord >> 5) & 3;
 					switch (check) {
@@ -154,6 +178,7 @@ void Instruction::MakeInstruction()
 			
 			switch (funct3)
 			{
+
 			case 0b000:
 			{
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
