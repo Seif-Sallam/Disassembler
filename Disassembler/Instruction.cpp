@@ -49,7 +49,7 @@ void Instruction::MakeInstruction()
 				I_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) ? 0xFFFFFFC0 : 0x0);
 				rs1 = (m_InstructionWord >> 7) & 0x7;
 				rd = (m_InstructionWord >> 2) & 0x7;
-				ss << "\tLW\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x"<< (int)I_imm << "\n";
+				ss << "\tLW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			}
 			default:
@@ -207,9 +207,9 @@ void Instruction::MakeInstruction()
 		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
 		// Calculuating the B immediate 
 		// - inst[31] -- inst[7] -- inst[30:25] -- inst[11:8] - 0
-		B_imm = (((m_InstructionWord >> 7) & 1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 24) & 0x3F) << 5) |
+		B_imm = (((m_InstructionWord >> 7) & 0x1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 25) & 0x3F) << 5) |
 			((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
-
+		
 		S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) |((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
 		U_imm = (((m_InstructionWord >> 12)) << 12);
 		addPrefix(instPC);
@@ -299,19 +299,19 @@ void Instruction::MakeInstruction()
 		{
 			switch (funct3) {
 			case 0b000: //LB
-				ss << "\tLB\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
+				ss << "\tLB\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			case 0b001: //LH
-				ss << "\tLH\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
+				ss << "\tLH\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			case 0b010: //LW
-				ss << "\tLW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
+				ss << "\tLW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			case 0b100: // LBU
-				ss << "\tLBU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
+				ss << "\tLBU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			case 0b101: // LHU
-				ss << "\tLHU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << ", " << getABIName(rs1) << "\n";
+				ss << "\tLHU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			default:
 				ss << "\tUnkown Load Instruciton\n";
@@ -360,13 +360,13 @@ void Instruction::MakeInstruction()
 			switch (funct3)
 			{
 			case 0b000://SB
-				ss << "\tSB\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				ss << "\tSB\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			case 0b001: //SH
-				ss << "\tSH\t" << getABIName(rs1) << ", x" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				ss << "\tSH\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			case 0b010: //SW
-				ss << "\tSW\t" << getABIName(rs1) << ", x" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "\n";
+				ss << "\tSW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
 				break;
 			default:
 				ss << "\tUnknown S Instruction\n";
