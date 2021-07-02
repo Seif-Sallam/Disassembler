@@ -273,7 +273,7 @@ void Instruction::MakeInstruction()
 		// Calculuating the S immediate 
 		S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) |((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
 		// Calculuating the U immediate 
-		U_imm = (((m_InstructionWord >> 12)) << 12);
+		U_imm = ((m_InstructionWord >> 12));
 
 		//Adding teh prefix to the instruction
 		addPrefix(instPC);
@@ -472,7 +472,6 @@ void Instruction::AddLabel(std::string labelName)
 {
 	// since we were appending to the labelName variable a character, we have take it as a copy
 	labelName += ":"; 
-	
 	//adding the labelName to the beginning of the instruction
 	for (int i = 0; i < labelName.size() + 1; i++) {
 		if(i < labelName.size())
@@ -480,6 +479,7 @@ void Instruction::AddLabel(std::string labelName)
 		else
 			m_InstructionStr.insert(m_InstructionStr.begin() + i, '\n');
 	}
+	m_InstructionStr.insert(m_InstructionStr.begin(), '\n');
 }
 
 void Instruction:: addPrefix(unsigned int instA) {
