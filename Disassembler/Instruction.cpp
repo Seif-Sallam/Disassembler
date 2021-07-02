@@ -376,7 +376,7 @@ void Instruction::MakeInstruction()
 		{
 			ss << "\tLUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
-		else if (opcode == 0x6F)
+		else if (opcode == 0x17)
 		{
 			ss << "\tAUIPC\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
