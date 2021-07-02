@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			int labelNum = instructions[i]->GetNextLabelNumber();
-			std::string labelName = "L" + std::to_string(labelNum);
+			std::string labelName = "Label" + std::to_string(labelNum);
 			instructions[j]->AddLabel(labelName);
 			instructions[i]->AddJumpLabel(labelName);
 		}

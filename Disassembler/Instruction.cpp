@@ -49,7 +49,7 @@ void Instruction::MakeInstruction()
 			case 0b110: {
 				S_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) ? 0xFFFFFFC0 : 0x0);
 				rs1 = (m_InstructionWord >> 7) & 0x7;
-				rd = (m_InstructionWord >> 2) & 0x7;
+				rs2 = (m_InstructionWord >> 2) & 0x7;
 				ss << "\tSW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
 			}
 				break;
