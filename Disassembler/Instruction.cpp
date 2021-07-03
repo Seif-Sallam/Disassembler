@@ -107,7 +107,7 @@ void Instruction::MakeInstruction()
 			case 0b011:
 			{
 				rd = (m_InstructionWord >> 7) & 0x1F;
-				U_imm = (((m_InstructionWord >> 2) & 0x1F) << 12) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFF0000 : 0x0);
+				U_imm = (((m_InstructionWord >> 2) & 0x1F)) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFF0000 : 0x0);
 				ss << "\tLUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 			}
 			case 4: {
