@@ -86,7 +86,7 @@ void Instruction::MakeInstruction()
 			case 0:
 			{
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
-				rs1 = (m_InstructionWord >> 7) & 0x1F + 8;
+				rs1 = (m_InstructionWord >> 7) & 0x1F;
 				rd = rs1;
 				ss << "\tC.ADDI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 				break;
@@ -207,7 +207,7 @@ void Instruction::MakeInstruction()
 				//Calculating the I immediate by a sequence of shifting, ANDing and ORing.
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
 				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
-				rs1 = ((m_InstructionWord >> 7) & 0x1F) + 8;
+				rs1 = ((m_InstructionWord >> 7) & 0x1F);
 				rd = rs1;
 				ss << "\tC.SLLI\t" << getABIName(rd) << std::hex <<", 0x" << (int)I_imm << "\n";
 				break;
@@ -215,8 +215,8 @@ void Instruction::MakeInstruction()
 			case 0b100: 
 			{
 				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
-				rs2 = ((m_InstructionWord >> 2) & 0x7) + 8;
-				rd = ((m_InstructionWord >> 7) & 0x7) + 8;
+				rs2 = ((m_InstructionWord >> 2) & 0x1F);
+				rd = ((m_InstructionWord >> 7) & 0x1F);
 				rs1 = rd;
 				//Since JALR and ADD share the same funct3 number, so we have to do extra step to check the instruction word for more information
 				//indicating which instruction is at hand.
@@ -227,7 +227,7 @@ void Instruction::MakeInstruction()
 				}
 				else 
 				{
-					rs1 = ((m_InstructionWord >> 7) & 0x1F) + 8;
+					rs1 = ((m_InstructionWord >> 7) & 0x1F);
 					//I imm is different in the JALR instruction than the other I-Type instructions
 					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
 					ss << "\tC.JALR\t" << getABIName(0x1) << ", 0(" << getABIName(rs1) << ") \n";
