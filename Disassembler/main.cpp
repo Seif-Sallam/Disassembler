@@ -114,6 +114,10 @@ int main(int argc, char* argv[]) {
 	for (auto& i : instructions)
 		std::cout << *i;
 
+	for (int i = 0; i < instructions.size(); i++)
+	{
+		delete instructions[i];
+	}
 	//End of main
 	return 0;
 }
