@@ -95,7 +95,7 @@ void Instruction::MakeInstruction()
 				J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
 					(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) ? 0xFFFFF800 : 0x0);
 				//We display the compressed JAL instruction using the J_imm and rd obtained above.
-				ss << "\tC.JAL\t" << getABIName(0x0) << ", " << std::hex << "0x" << (int)J_imm;
+				ss << "\tC.JAL\t" << getABIName(0x1) << ", " << std::hex << "0x" << (int)J_imm;
 				//We do extra bool checks after the JAL instruction to display the label, and calculate the offset to know where is the label in the memory address.
 				m_IsBranchOrJumpInst = true;
 				m_Offset = (int)J_imm;
@@ -124,7 +124,7 @@ void Instruction::MakeInstruction()
 					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
 					rs1 = (m_InstructionWord >> 7) & 0x3;
 					rd = rs1;
-					ss << "\tC.SRAI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+					ss << "\tC.SRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 
 				}
 				case 0x2:
@@ -204,8 +204,8 @@ void Instruction::MakeInstruction()
 				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
 				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
 				rs1 = (m_InstructionWord >> 7) & 7;
-
-				ss << "\tC.SLLI\t" << getABIName(rd) << std::hex <<", 0x" << (int)I_imm << "\n";
+				rd = rs1;
+				ss << "\tC.SLLI\t" << getABIName(rd) << ", " << getABIName(rd) << std::hex <<", 0x" << (int)I_imm << "\n";
 				break;
 			}
 			case 0b100: 
@@ -219,7 +219,7 @@ void Instruction::MakeInstruction()
 				if (((m_InstructionWord >> 2) & 0x1F) != 0x0)
 				{
 					//We display the compressed ADD instruction using rd, rs1, and rs2 obtained above.
-					ss << "\tC.ADD\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
+					ss << "\tC.ADD\t" << getABIName(rd) << ", " << getABIName(rd) << ", " << getABIName(rs2) << "\n";
 				}
 				else 
 				{
