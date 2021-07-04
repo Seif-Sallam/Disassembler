@@ -24,9 +24,9 @@ The main compoment in the project is the class `Instruction` that represents the
 2. Open a Terminal and run the command `rvcdiss <machine_code_file_name>` (It takes the file you want to decode as a second command line argument)
 
 ## Team Contributions:
-* **Seif Sallam** (Team Leader): Added the base structure of the Instruction class, and contributed to adding the label functionality in the program and did the I and B instructions (Conmpressed and Non Compressed). [Seif Sallam-Email](seif_sallam@aucegypt.edu)
-* **Yara Ali** (Member): Testing the code and formatted the U and S instructions (Compresed and non Compressed). [Yara Ali-Email](yarayahia@aucegypt.edu)
-* **Kareem Amr** (Member): Testing the code and formatted the R and J instructions (Compressed and non Compressed). [Kareem Amr-Email](kareemamr213@aucegypt.edu)
+* **[Seif Sallam](seif_sallam@aucegypt.edu)** (Team Leader): Added the base structure of the Instruction class, and contributed to adding the label functionality in the program and did the I and B instructions (Conmpressed and Non Compressed). 
+* **[Yara Ali](yarayahia@aucegypt.edu)** (Member): Testing the code and formatted the U and S instructions (Compresed and non Compressed).
+* **[Kareem Amr](kareemamr213@aucegypt.edu)** (Member): Testing the code and formatted the R and J instructions (Compressed and non Compressed). 
 
 ##### N.B.:
 Each one of us had consistent work and contribution with the github repository as we all were working on differnet branches and merging them at different points in time such as:
