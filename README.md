@@ -16,7 +16,7 @@ The main compoment in the project is the class `Instruction` that represents the
 ## Limitations
 
 * There are some instructions in RISCV32IC that we did not implement nor included its opcode, such as `FENCE`, `EBREAK`, etc.. (Not required).
-* We could not test the program on Compressed instructions.
+* We could not test the program on All Compressed instructions. (The tested compressed instructions are the arithmatic ones only).
 
 ## How to run
 
