@@ -1,5 +1,5 @@
 # Disassembler
-The project implements the disassemble of the RISCV32IC instrucrtions from binary to actual text instructions.
+The project implements the disassemble of the RISCV32IC instructions from binary to actual text instructions.
 
 ## Implementation
 
@@ -28,9 +28,14 @@ The main compoment in the project is the class `Instruction` that represents the
 * **[Yara Ali](yarayahia@aucegypt.edu)** (Member): Testing the code and formatted the U and S instructions (Compresed and non Compressed).
 * **[Kareem Amr](kareemamr213@aucegypt.edu)** (Member): Testing the code and formatted the R and J instructions (Compressed and non Compressed). 
 
+### Resources Used
+* [RISCV Specification manual (PDF 1.0MB)](https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMAFDQC/riscv-spec-20191213.pdf)
+
 ##### N.B.:
 Each one of us had consistent work and contribution with the github repository as we all were working on differnet branches and merging them at different points in time such as:
 1. First Merge after adding the first 32bit instructions (Branches are now deleted).
 2. Second Merge after miagrating the code to be Object Oriented (Adding the Instruction class).
 3. Third Merge after adding the Compressed instructions (Branches still exist but in a very old version).
 4. All the final work was done inside the `master` branch.
+
+
