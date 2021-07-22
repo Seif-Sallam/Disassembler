@@ -99,13 +99,20 @@ int main(int argc, char* argv[]) {
 					}
 				}
 			}//End of While
-
-			//Finding the label Number and adding the label.
-			std::string labelName = "Label" + std::to_string(Instruction::GetNextLabelNumber());
-			//j inductive variable used to indicate the index of the destination instruction
-			instructions[j]->AddLabel(labelName);
-			//i indeuctive variable used to indicate the index of the branch or jump instruction (source)
-			instructions[i]->AddJumpLabel(labelName);
+			std::string labelName;
+			if (instructions[j]->HasLabel(labelName))
+			{
+				instructions[i]->AddJumpLabel(labelName);
+			}
+			else
+			{
+				//Finding the label Number and adding the label.
+				labelName = "Label" + std::to_string(Instruction::GetNextLabelNumber());
+				//j inductive variable used to indicate the index of the destination instruction
+				instructions[j]->AddLabel(labelName);
+				//i indeuctive variable used to indicate the index of the branch or jump instruction (source)
+				instructions[i]->AddJumpLabel(labelName);
+			}
 		}
 
 	}

@@ -39,15 +39,13 @@ void Instruction::MakeInstruction()
 		m_InstructionWord = m_InstructionWord & 0x0000FFFF;
 
 		//Declaration of the variables used in the instruction
-		unsigned int rd, rs1, rs2, funct3, opcode;
-		unsigned int I_imm, S_imm, B_imm, U_imm, J_imm;
+		unsigned int opcode;
 
 		//instruction Address
 		unsigned int instPC = *m_PC - 2;
 
 		//The most common two components of the instruction
 		opcode = m_InstructionWord & 0x3;
-		funct3 = (m_InstructionWord >> 13) & 0x7;
 
 		//Adding the prefix of the instruction
 		addPrefix(instPC);
@@ -58,185 +56,15 @@ void Instruction::MakeInstruction()
 		//Put in your switch statement.
 		if (opcode == 0b00)
 		{
-			switch (funct3)
-			{
-			case 0b110: {
-				S_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) << 6);
-				rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
-				rs2 = (m_InstructionWord >> 2) & 0x7 + 8;
-				ss << "\tC.SW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
-			}
-				break;
-			case 0b010:
-			{
-				I_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) << 6);
-				rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
-				rd = (m_InstructionWord >> 2) & 0x7 + 8;
-				ss << "\tC.LW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			}
-			default:
-				ss << "\tUnknown 00 Compressed Instruction\n";
-			}
+			Make00Instruction();
 		}
 		else if (opcode == 0b01)
 		{
-			switch (funct3)
-			{
-			case 0:
-			{
-				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
-				rs1 = (m_InstructionWord >> 7) & 0x1F;
-				rd = rs1;
-				ss << "\tC.ADDI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			}
-			case 1: 
-			{
-				//We calculate the compressed J instruction immediate by using shifts on the instruction word and storing each bit
-				//in its correct place in the immediate.
-				J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
-					(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) ? 0xFFFFF800 : 0x0);
-				//We display the compressed JAL instruction using the J_imm and rd obtained above.
-				ss << "\tC.JAL\t" << std::hex << "0x" << (int)J_imm;
-				//We do extra bool checks after the JAL instruction to display the label, and calculate the offset to know where is the label in the memory address.
-				m_IsBranchOrJumpInst = true;
-				m_Offset = (int)J_imm;
-				break;
-			}
-			case 0b011:
-			{
-				rd = (m_InstructionWord >> 7) & 0x1F;
-				U_imm = (((m_InstructionWord >> 2) & 0x1F) << 12) | (((m_InstructionWord >> 12) & 0x1) ? 0xFF000000 : 0x0);
-				ss << "\tC.LUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
-			}
-			case 4: {
-				unsigned int checkingInt = (m_InstructionWord >> 10) & 0x3;
-				switch (checkingInt)
-				{
-				case 0x0: {	
-
-					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
-					rs1 = ((m_InstructionWord >> 7) & 0x3) + 8;
-					rd = rs1;
-					ss << "\tC.SRLI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-					break;
-				}
-				case 0x1:
-				{
-					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
-					rs1 = ((m_InstructionWord >> 7) & 0x3) + 8;
-					rd = rs1;
-					ss << "\tC.SRAI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-
-				}
-				case 0x2:
-				{
-					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
-					rs1 = (m_InstructionWord >> 7) & 0x3 + 8;
-					rd = rs1;
-					ss << "\tC.ANDI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-					break;
-				}
-				case 0x3: {
-					//We obtain the rs1, rs2, rd from the instruction word through shifting, note: rs1 = rd in the compressed instructions
-					rs2 = ((m_InstructionWord >> 2) & 7) + 8;
-					rd  = ((m_InstructionWord >> 7) & 7) + 8;
-					unsigned int check;
-					//Here we add another unsigned int which reads a specific part of the instruction Word to indicate which compressed instruction is being
-					//excuted (there are some instructions that share the same funct3, therefore check differs between them)
-					check = (m_InstructionWord >> 5) & 3;
-					switch (check) {
-					//Displaying the compressed SUB, XOR, OR, AND instructions (depending on check value from the instruction word) using the rd, rs1, rs2 obtained above.
-					case 0:
-						ss << "\tC.SUB\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
-						break;
-					case 1:
-						ss << "\tC.XOR\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
-						break;
-					case 2:
-						ss << "\tC.OR\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
-						break;
-					case 3:
-						ss << "\tC.AND\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
-						break;
-					// if no R instruction is matched, this message is displayed indicated an unkown instruction.
-					default:
-						ss << "\tUnkown R Instruction \n";
-					}
-				}
-				}
-				break;
-			}
-			case 0b110:
-			{
-				//Calculating the B immediate by a sequence of shifting, ANDing and ORing.
-				B_imm = (((m_InstructionWord >> 3) & 0x3) << 1) | (((m_InstructionWord >> 10) & 0x3) << 3) | (((m_InstructionWord >> 2) & 0x1) << 5)
-					| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF00 : 0x0);
-				//According to the instruction format
-				rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
-
-				ss << "\tC.BEQZ\t" << getABIName(rs1) << std::hex << ", 0x" << (int)B_imm;
-				m_IsBranchOrJumpInst = true;
-				m_Offset = (int)B_imm;
-				break;
-			}
-			case 0b111:
-			{
-				//Calculating the B immediate by a sequence of shifting, ANDing and ORing.
-				B_imm = (((m_InstructionWord >> 3) & 0x3) << 1) | (((m_InstructionWord >> 10) & 0x3) << 3) | (((m_InstructionWord >> 2) & 0x1) << 5)
-					| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF00 : 0x0);
-				//According to the instruction format
-				rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
-				ss << "\tC.BNEZ\t" << getABIName(rs1) << std::hex << ", 0x" << (int)B_imm;
-				m_IsBranchOrJumpInst = true;
-				m_Offset = (int)B_imm;
-				break;
-			}
-			default:
-				ss << "\tUnknown 01 Compressed Instruction\n";
-			}
+			Make01Instruction();
 		}
 		else if (opcode == 0b10)
 		{
-			
-			switch (funct3)
-			{
-			case 0b000:
-			{
-				//Calculating the I immediate by a sequence of shifting, ANDing and ORing.
-				I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
-				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
-				rs1 = ((m_InstructionWord >> 7) & 0x1F);
-				rd = rs1;
-				ss << "\tC.SLLI\t" << getABIName(rd) << std::hex <<", 0x" << (int)I_imm << "\n";
-				break;
-			}
-			case 0b100: 
-			{
-				//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
-				rs2 = ((m_InstructionWord >> 2) & 0x1F);
-				rd = ((m_InstructionWord >> 7) & 0x1F);
-				rs1 = rd;
-				//Since JALR and ADD share the same funct3 number, so we have to do extra step to check the instruction word for more information
-				//indicating which instruction is at hand.
-				if (((m_InstructionWord >> 2) & 0x1F) != 0x0)
-				{
-					//We display the compressed ADD instruction using rd, rs1, and rs2 obtained above.
-					ss << "\tC.ADD\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
-				}
-				else 
-				{
-					rs1 = ((m_InstructionWord >> 7) & 0x1F);
-					//I imm is different in the JALR instruction than the other I-Type instructions
-					I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
-					ss << "\tC.JALR\t" << getABIName(0x1) << ", 0(" << getABIName(rs1) << ") \n";
-				}
-				break;
-			}
-			default:
-				ss << "\tUnknown 01 Compressed Instruction\n";
-			}
+			Make10Instruction();
 		}
 		else
 		{
@@ -249,8 +77,8 @@ void Instruction::MakeInstruction()
 	{
 		// Non compressed instructions are 4 bytes so we increase the program counter by 4
 		*m_PC += 4;
-		unsigned int rd, rs1, rs2, funct3, funct7, opcode;
-		unsigned int I_imm, S_imm, B_imm, U_imm, J_imm;
+		unsigned int rd, rs1, rs2, funct3, opcode;
+		unsigned int U_imm;
 
 		unsigned int instPC = *m_PC - 4;
 		//We obtain the opcode, rd, funct3, rs1, and rs2 by using shifts on the instruction word.
@@ -260,19 +88,7 @@ void Instruction::MakeInstruction()
 		rs1 = (m_InstructionWord >> 15) & 0x0000001F;
 		rs2 = (m_InstructionWord >> 20) & 0x0000001F;
 
-		//We calculate the J instruction immediate by using shifts on the instruction word and storing each bit
-		//in its correct place in the immediate.
-		J_imm = (((m_InstructionWord >> 12) & 0x000000FF) << 12) | (((m_InstructionWord >> 20) & 1) << 11) | (((m_InstructionWord >> 21) & 0x000003FF) << 1) |
-			(((m_InstructionWord >> 31) & 1) ? 0xFFF00000 : 0x0);
-		// — inst[31] — inst[30:25] inst[24:21] inst[20] (provided in the skeleton code)
-		I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
-		// Calculuating the B immediate 
-		B_imm = (((m_InstructionWord >> 7) & 0x1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 25) & 0x3F) << 5) |
-			((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
-		// Calculuating the S immediate 
-		S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) |((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
 		// Calculuating the U immediate 
-		U_imm = ((m_InstructionWord >> 12));
 
 		//Adding teh prefix to the instruction
 		addPrefix(instPC);
@@ -286,176 +102,47 @@ void Instruction::MakeInstruction()
 		}
 		else if (opcode == 0x33) {// R Instructions
 			//Since some of the R instructions share the same funct3 number, then we have to obtain funct7 number using shifts on the instruction word
-			funct7 = (m_InstructionWord >> 24) & 0x0000007F;
-			switch (funct3) {
-				//Since the ADD and SUB instructions share the same funct3 number (0), then funct7 is used to distinct between them
-			case 0: 
-				if (funct7 == 32) {
-					//Depending on the funct7 number, we displaying the SUB and ADD instructions using rd, rs1, and rs2 obtained above.
-					ss << "\tSUB\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				}
-				else {
-					ss << "\tADD\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				}
-				  break;
-				//Displaying the rest of the R instructions based on the funct3 number using the rd, rs1, and rs2 obtained above from the instruction word
-			case 1: ss << "\tSLL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				break;
-			case 2: ss << "\tSLT\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				break;
-			case 3: ss << "\tSLTU\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				break;
-			case 4: ss << "\tXOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				break;
-				//Since the SRL and SRA instructions share the same funct3 number (5), then funct7 is used to distinct between them
-			case 5: {
-				//Depending on the funct7 number, we displaying the SRL and SRA instructions using rd, rs1, and rs2 obtained above.
-				if (funct7 == 32) {
-					ss << "\tSRL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				}
-				else {
-					ss << "\tSRA\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				}
-				break;
-			}
-			case 6:
-				ss << "\tOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				break;
-			case 7:
-				ss << "\tAND\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
-				break;
-			default:
-				//Otherwise if none of the above cases are matched then we display the following message indictating an unkown R instruction.
-				ss << "\tUnkown R Instruction \n";
-			}
+			MakeRInstruction();
 		}
 		else if (opcode == 0x13) {	// I instructions
-			switch (funct3) {
-			case 0:
-				ss << "\tADDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			case 0b010: // SLTI
-				ss << "\tSLTI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			case 0b011: // SLTIU
-				ss << "\tSLTIU\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			case 0b100: // XORI
-				ss << "\tXORI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			case 0b110: // ORI
-				ss << "\tORI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			case 0b111: // ANDI
-				ss << "\tANDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
-				break;
-			case 0b001: //SLLI
-			{
-				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
-				ss << "\tSLLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
-				break;
-			}
-			case 0b101:
-			{
-				unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
-				unsigned int lastBits = (m_InstructionWord >> 25) & 0b1111111;
-				if (lastBits == 0)
-					// SRLI
-					ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << shiftAmount << "\n";
-				else
-					//SRAI
-					ss << "\tSRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << shiftAmount << "\n";
-				break;
-			}
-			default:
-				ss << "Unknown I Instruction\n";
-			}
+			MakeIInstruction();
 		}
 		else if (opcode == 0b0000011) //Load instructions  (I TYPE)
 		{
-			switch (funct3) {
-			case 0b000: //LB
-				ss << "\tLB\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			case 0b001: //LH
-				ss << "\tLH\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			case 0b010: //LW
-				ss << "\tLW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			case 0b100: // LBU
-				ss << "\tLBU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			case 0b101: // LHU
-				ss << "\tLHU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			default:
-				ss << "\tUnkown Load Instruciton\n";
-			}
+			MakeLoadInstruction();
 		}
 		else if (opcode == 0b1100111) //JALR instruction
 		{
+			unsigned int I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
+
 			ss << "\tJALR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
 		}
 		else if (opcode == 0b1100011)  // B-Type instructions.
 		{
-			m_IsBranchOrJumpInst = true;
-			m_Offset = (int)B_imm;
-			switch (funct3)
-			{
-			case 0b000: //BEQ
-				ss << "\tBEQ\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
-				break;
-			case 0b001: //BNE
-				ss << "\tBNE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
-				break;
-			case 0b100: //BLT
-				ss << "\tBLT\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
-				break;
-			case 0b101: //BGE
-				ss << "\tBGE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
-				break;
-			case 0b110: //BLTU
-				ss << "\tBLTU\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
-				break;
-			case 0b111: //BGEU
-				ss << "\tBGEU\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
-				break;
-			default:
-				ss << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
-			}
+			MakeBInstruction();
 		}
 		else if (opcode == 0x6F)  // J instructions
 		{
-		//Here we display the jal instruction (the only j instruction) using the rd, and J_imm obtained above.
-		ss << "\tJAL\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)J_imm;
-		//We do extra bool checks after the JAL instruction to display the label, and calculate the offset to know where is the label in the memory address.
+			unsigned int J_imm = (((m_InstructionWord >> 12) & 0x000000FF) << 12) | (((m_InstructionWord >> 20) & 1) << 11) | (((m_InstructionWord >> 21) & 0x000003FF) << 1) |
+				(((m_InstructionWord >> 31) & 1) ? 0xFFF00000 : 0x0);
+			//Here we display the jal instruction (the only j instruction) using the rd, and J_imm obtained above.
+			ss << "\tJAL\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)J_imm;
+			//We do extra bool checks after the JAL instruction to display the label, and calculate the offset to know where is the label in the memory address.
 			m_IsBranchOrJumpInst = true;
 			m_Offset = (int)J_imm;
 		}
 		else if (opcode == 0b0100011)// S instruction
 		{
-			switch (funct3)
-			{
-			case 0b000://SB
-				ss << "\tSB\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			case 0b001: //SH
-				ss << "\tSH\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			case 0b010: //SW
-				ss << "\tSW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
-				break;
-			default:
-				ss << "\tUnknown S Instruction\n";
-			}
+			MakeSInstruction();
 		}
 		else if (opcode == 0x37)// U type
 		{
+			U_imm = ((m_InstructionWord >> 12));
 			ss << "\tLUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
 		else if (opcode == 0x17)
 		{
+			U_imm = ((m_InstructionWord >> 12));
 			ss << "\tAUIPC\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
 		}
 		else 
@@ -469,6 +156,8 @@ void Instruction::MakeInstruction()
 
 void Instruction::AddLabel(std::string labelName)
 {
+	m_LabelName = labelName;
+	m_HasALabel = true;
 	// since we were appending to the labelName variable a character, we have take it as a copy
 	labelName += ":"; 
 	//adding the labelName to the beginning of the instruction
@@ -591,6 +280,440 @@ std::string Instruction::getABIName(unsigned int regNumber)
 		return "UNKOWN REGISTER";
 	}
 }
+void Instruction::MakeBInstruction()
+{
+	std::stringstream ss;
+
+	unsigned int rd = (m_InstructionWord >> 7) & 0x0000001F;
+	unsigned int funct3 = (m_InstructionWord >> 12) & 0x00000007;
+	unsigned int rs1 = (m_InstructionWord >> 15) & 0x0000001F;
+	unsigned int rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+
+	unsigned int B_imm = (((m_InstructionWord >> 7) & 0x1) << 11) | (((m_InstructionWord >> 8) & 0xF) << 1) | (((m_InstructionWord >> 25) & 0x3F) << 5) |
+		((m_InstructionWord >> 31) ? 0xFFFFF000 : 0x0);
+
+	m_IsBranchOrJumpInst = true;
+	m_Offset = (int)B_imm;
+	switch (funct3)
+	{
+	case 0b000: //BEQ
+		ss << "\tBEQ\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+		break;
+	case 0b001: //BNE
+		ss << "\tBNE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+		break;
+	case 0b100: //BLT
+		ss << "\tBLT\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+		break;
+	case 0b101: //BGE
+		ss << "\tBGE\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+		break;
+	case 0b110: //BLTU
+		ss << "\tBLTU\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+		break;
+	case 0b111: //BGEU
+		ss << "\tBGEU\t" << getABIName(rs1) << ", " << getABIName(rs2) << ", " << std::hex << "0x" << (int)B_imm;
+		break;
+	default:
+		ss << "\tUnkown B Instruction \n"; // All of them are listed already but it is here for debugging purposes
+	}
+	m_InstructionStr += ss.str();
+}
+void Instruction::MakeRInstruction()
+{
+	std::stringstream ss;
+	unsigned int rd = (m_InstructionWord >> 7) & 0x0000001F;
+	unsigned int funct3 = (m_InstructionWord >> 12) & 0x00000007;
+	unsigned int rs1 = (m_InstructionWord >> 15) & 0x0000001F;
+	unsigned int rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+	unsigned int funct7 = (m_InstructionWord >> 24) & 0x0000007F;
+
+
+	switch (funct3) {
+		//Since the ADD and SUB instructions share the same funct3 number (0), then funct7 is used to distinct between them
+	case 0:
+		if (funct7 == 32) {
+			//Depending on the funct7 number, we displaying the SUB and ADD instructions using rd, rs1, and rs2 obtained above.
+			ss << "\tSUB\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		}
+		else {
+			ss << "\tADD\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		}
+		break;
+		//Displaying the rest of the R instructions based on the funct3 number using the rd, rs1, and rs2 obtained above from the instruction word
+	case 1: ss << "\tSLL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		break;
+	case 2: ss << "\tSLT\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		break;
+	case 3: ss << "\tSLTU\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		break;
+	case 4: ss << "\tXOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		break;
+		//Since the SRL and SRA instructions share the same funct3 number (5), then funct7 is used to distinct between them
+	case 5: {
+		//Depending on the funct7 number, we displaying the SRL and SRA instructions using rd, rs1, and rs2 obtained above.
+		if (funct7 == 32) {
+			ss << "\tSRL\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		}
+		else {
+			ss << "\tSRA\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		}
+		break;
+	}
+	case 6:
+		ss << "\tOR\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		break;
+	case 7:
+		ss << "\tAND\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << getABIName(rs2) << "\n";
+		break;
+	default:
+		//Otherwise if none of the above cases are matched then we display the following message indictating an unkown R instruction.
+		ss << "\tUnkown R Instruction \n";
+	}
+
+	m_InstructionStr += ss.str();
+}
+void Instruction::MakeIInstruction()
+{
+	std::stringstream ss;
+	unsigned int rd = (m_InstructionWord >> 7) & 0x0000001F;
+	unsigned int funct3 = (m_InstructionWord >> 12) & 0x00000007;
+	unsigned int rs1 = (m_InstructionWord >> 15) & 0x0000001F;
+	unsigned int rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+	// — inst[31] — inst[30:25] inst[24:21] inst[20] (provided in the skeleton code)
+	unsigned int I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
+	switch (funct3) {
+	case 0:
+		ss << "\tADDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	case 0b010: // SLTI
+		ss << "\tSLTI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	case 0b011: // SLTIU
+		ss << "\tSLTIU\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	case 0b100: // XORI
+		ss << "\tXORI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	case 0b110: // ORI
+		ss << "\tORI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	case 0b111: // ANDI
+		ss << "\tANDI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	case 0b001: //SLLI
+	{
+		unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
+		ss << "\tSLLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << (int)shiftAmount << "\n";
+		break;
+	}
+	case 0b101:
+	{
+		unsigned int shiftAmount = (m_InstructionWord >> 19) & 0b11111;
+		unsigned int lastBits = (m_InstructionWord >> 25) & 0b1111111;
+		if (lastBits == 0)
+			// SRLI
+			ss << "\tSRLI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << shiftAmount << "\n";
+		else
+			//SRAI
+			ss << "\tSRAI\t" << getABIName(rd) << ", " << getABIName(rs1) << ", " << std::hex << "0x" << shiftAmount << "\n";
+		break;
+	}
+	default:
+		ss << "Unknown I Instruction\n";
+	}
+	m_InstructionStr += ss.str();
+}
+
+void Instruction::MakeLoadInstruction() {
+	std::stringstream ss;
+	unsigned int rd = (m_InstructionWord >> 7) & 0x0000001F;
+	unsigned int funct3 = (m_InstructionWord >> 12) & 0x00000007;
+	unsigned int rs1 = (m_InstructionWord >> 15) & 0x0000001F;
+	unsigned int rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+	unsigned int I_imm = ((m_InstructionWord >> 20) & 0x7FF) | (((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0));
+
+	switch (funct3) {
+	case 0b000: //LB
+		ss << "\tLB\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	case 0b001: //LH
+		ss << "\tLH\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	case 0b010: //LW
+		ss << "\tLW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	case 0b100: // LBU
+		ss << "\tLBU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	case 0b101: // LHU
+		ss << "\tLHU\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	default:
+		ss << "\tUnkown Load Instruciton\n";
+	}
+	m_InstructionStr += ss.str();
+}
+
+void Instruction::MakeSInstruction()
+{
+	std::stringstream ss;
+	unsigned int rd = (m_InstructionWord >> 7) & 0x0000001F;
+	unsigned int funct3 = (m_InstructionWord >> 12) & 0x00000007;
+	unsigned int rs1 = (m_InstructionWord >> 15) & 0x0000001F;
+	unsigned int rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+	unsigned int S_imm = ((m_InstructionWord >> 7) & 0x1F) | (((m_InstructionWord >> 24) & 0x3F) << 5) | ((m_InstructionWord >> 31) ? 0xFFFFF800 : 0x0);
+	switch (funct3)
+	{
+	case 0b000://SB
+		ss << "\tSB\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	case 0b001: //SH
+		ss << "\tSH\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	case 0b010: //SW
+		ss << "\tSW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	default:
+		ss << "\tUnknown S Instruction\n";
+	}
+
+	m_InstructionStr += ss.str();
+}
+
+void Instruction::MakeUInstruction()
+{
+	std::stringstream ss;
+	unsigned int rd = (m_InstructionWord >> 7) & 0x0000001F;
+	unsigned int funct3 = (m_InstructionWord >> 12) & 0x00000007;
+	unsigned int rs1 = (m_InstructionWord >> 15) & 0x0000001F;
+	unsigned int rs2 = (m_InstructionWord >> 20) & 0x0000001F;
+	// Calculuating the U immediate 
+	unsigned int U_imm = ((m_InstructionWord >> 12));
+	m_InstructionStr += ss.str();
+}
+
+void Instruction::Make00Instruction()
+{
+	unsigned int rd, rs1, rs2, funct3;
+	unsigned int I_imm, S_imm;
+	funct3 = (m_InstructionWord >> 13) & 0x7;
+	std::stringstream ss;
+	switch (funct3)
+	{
+	case 0b110: {
+		S_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) << 6);
+		rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
+		rs2 = (m_InstructionWord >> 2) & 0x7 + 8;
+		ss << "\tC.SW\t" << getABIName(rs2) << ", " << std::hex << "0x" << (int)S_imm << "(" << getABIName(rs1) << ")\n";
+	}
+			  break;
+	case 0b010:
+	{
+		I_imm = (((m_InstructionWord >> 10) & 0x7) << 3) | (((m_InstructionWord >> 6) & 0x1) << 2) | (((m_InstructionWord >> 5) & 0x1) << 6);
+		rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
+		rd = (m_InstructionWord >> 2) & 0x7 + 8;
+		ss << "\tC.LW\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "(" << getABIName(rs1) << ")\n";
+		break;
+	}
+	default:
+		ss << "\tUnknown 00 Compressed Instruction\n";
+	}
+	m_InstructionStr += ss.str();
+}
+
+void Instruction::Make01Instruction()
+{
+	unsigned int rd, rs1, rs2, funct3, opcode;
+	unsigned int I_imm, B_imm, U_imm, J_imm;
+	funct3 = (m_InstructionWord >> 13) & 0x7;
+	std::stringstream ss;
+
+	switch (funct3)
+	{
+	case 0b000:
+	{
+		I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+		rs1 = (m_InstructionWord >> 7) & 0x1F;
+		rd = rs1;
+		ss << "\tC.ADDI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	}
+	case 0b001:
+	{
+		//We calculate the compressed J instruction immediate by using shifts on the instruction word and storing each bit
+		//in its correct place in the immediate.
+		J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
+			(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) ? 0xFFFFF800 : 0x0);
+		//We display the compressed JAL instruction using the J_imm and rd obtained above.
+		ss << "\tC.JAL\t" << std::hex << "0x" << (int)J_imm;
+		//We do extra bool checks after the JAL instruction to display the label, and calculate the offset to know where is the label in the memory address.
+		m_IsBranchOrJumpInst = true;
+		m_Offset = (int)J_imm;
+		break;
+	}
+	case 0b010:
+	{
+		I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+		rs1 = (m_InstructionWord >> 7) & 0x1F;
+		rd = rs1;
+		ss << "\tC.LI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+		break;
+	}
+	case 0b011:
+	{
+		rd = (m_InstructionWord >> 7) & 0x1F;
+		U_imm = (((m_InstructionWord >> 2) & 0x1F) << 12) | (((m_InstructionWord >> 12) & 0x1) ? 0xFF000000 : 0x0);
+		ss << "\tC.LUI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)U_imm << "\n";
+		break;
+	}
+	case 0100: {
+		unsigned int checkingInt = (m_InstructionWord >> 10) & 0x3;
+		switch (checkingInt)
+		{
+		case 0x0: {
+
+			I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
+			rs1 = ((m_InstructionWord >> 7) & 0x3) + 8;
+			rd = rs1;
+			ss << "\tC.SRLI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		}
+		case 0x1:
+		{
+			I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
+			rs1 = ((m_InstructionWord >> 7) & 0x3) + 8;
+			rd = rs1;
+			ss << "\tC.SRAI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+
+		}
+		case 0x2:
+		{
+			I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+			rs1 = (m_InstructionWord >> 7) & 0x3 + 8;
+			rd = rs1;
+			ss << "\tC.ANDI\t" << getABIName(rd) << ", " << std::hex << "0x" << (int)I_imm << "\n";
+			break;
+		}
+		case 0x3: {
+			//We obtain the rs1, rs2, rd from the instruction word through shifting, note: rs1 = rd in the compressed instructions
+			rs2 = ((m_InstructionWord >> 2) & 7) + 8;
+			rd = ((m_InstructionWord >> 7) & 7) + 8;
+			unsigned int check;
+			//Here we add another unsigned int which reads a specific part of the instruction Word to indicate which compressed instruction is being
+			//excuted (there are some instructions that share the same funct3, therefore check differs between them)
+			check = (m_InstructionWord >> 5) & 3;
+			switch (check) {
+				//Displaying the compressed SUB, XOR, OR, AND instructions (depending on check value from the instruction word) using the rd, rs1, rs2 obtained above.
+			case 0:
+				ss << "\tC.SUB\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
+				break;
+			case 1:
+				ss << "\tC.XOR\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
+				break;
+			case 2:
+				ss << "\tC.OR\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
+				break;
+			case 3:
+				ss << "\tC.AND\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
+				break;
+				// if no R instruction is matched, this message is displayed indicated an unkown instruction.
+			default:
+				ss << "\tUnkown R Instruction \n";
+			}
+		}
+		}
+		break;
+	}
+	case 0b101:
+	{
+		J_imm = (((m_InstructionWord >> 2) & 1) << 5) | (((m_InstructionWord >> 3) & 7) << 1) | (((m_InstructionWord >> 6) & 1) << 7) | (((m_InstructionWord >> 7) & 1) << 6) |
+			(((m_InstructionWord >> 8) & 1) << 10) | (((m_InstructionWord >> 9) & 3) << 8) | (((m_InstructionWord >> 11) & 1) << 4) | (((m_InstructionWord >> 12) & 1) ? 0xFFFFF800 : 0x0);
+		//We display the compressed JAL instruction using the J_imm and rd obtained above.
+		ss << "\tC.J\t" << std::hex << "0x" << (int)J_imm;
+		//We do extra bool checks after the JAL instruction to display the label, and calculate the offset to know where is the label in the memory address.
+		m_IsBranchOrJumpInst = true;
+		m_Offset = (int)J_imm;
+		break;
+		break;
+	}
+	case 0b110:
+	{
+		//Calculating the B immediate by a sequence of shifting, ANDing and ORing.
+		B_imm = (((m_InstructionWord >> 3) & 0x3) << 1) | (((m_InstructionWord >> 10) & 0x3) << 3) | (((m_InstructionWord >> 2) & 0x1) << 5)
+			| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF00 : 0x0);
+		//According to the instruction format
+		rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
+
+		ss << "\tC.BEQZ\t" << getABIName(rs1) << std::hex << ", 0x" << (int)B_imm;
+		m_IsBranchOrJumpInst = true;
+		m_Offset = (int)B_imm;
+		break;
+	}
+	case 0b111:
+	{
+		//Calculating the B immediate by a sequence of shifting, ANDing and ORing.
+		B_imm = (((m_InstructionWord >> 3) & 0x3) << 1) | (((m_InstructionWord >> 10) & 0x3) << 3) | (((m_InstructionWord >> 2) & 0x1) << 5)
+			| (((m_InstructionWord >> 5) & 0x3) << 6) | (((m_InstructionWord >> 12) & 0x1) ? 0xFFFFFF00 : 0x0);
+		//According to the instruction format
+		rs1 = (m_InstructionWord >> 7) & 0x7 + 8;
+		ss << "\tC.BNEZ\t" << getABIName(rs1) << std::hex << ", 0x" << (int)B_imm;
+		m_IsBranchOrJumpInst = true;
+		m_Offset = (int)B_imm;
+		break;
+	}
+	default:
+		ss << "\tUnknown 01 Compressed Instruction\n";
+	}
+	m_InstructionStr += ss.str();
+}
+void Instruction::Make10Instruction()
+{
+	unsigned int rd, rs1, rs2, funct3;
+	unsigned int I_imm;
+	funct3 = (m_InstructionWord >> 13) & 0x7;
+	std::stringstream ss;
+	switch (funct3)
+	{
+	case 0b000:
+	{
+		//Calculating the I immediate by a sequence of shifting, ANDing and ORing.
+		I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) << 5);
+		//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
+		rs1 = ((m_InstructionWord >> 7) & 0x1F);
+		rd = rs1;
+		ss << "\tC.SLLI\t" << getABIName(rd) << std::hex << ", 0x" << (int)I_imm << "\n";
+		break;
+	}
+	case 0b100:
+	{
+		//We obtain rs1, rs2, and rd through shifting the instruction word NOTE: rd = rs1 in most compressed instructions.
+		rs2 = ((m_InstructionWord >> 2) & 0x1F);
+		rd = ((m_InstructionWord >> 7) & 0x1F);
+		rs1 = rd;
+		//Since JALR and ADD share the same funct3 number, so we have to do extra step to check the instruction word for more information
+		//indicating which instruction is at hand.
+		if (((m_InstructionWord >> 2) & 0x1F) != 0x0)
+		{
+			//We display the compressed ADD instruction using rd, rs1, and rs2 obtained above.
+			ss << "\tC.ADD\t" << getABIName(rd) << ", " << getABIName(rs2) << "\n";
+		}
+		else
+		{
+			rs1 = ((m_InstructionWord >> 7) & 0x1F);
+			//I imm is different in the JALR instruction than the other I-Type instructions
+			I_imm = ((m_InstructionWord >> 2) & 0x1F) | ((m_InstructionWord >> 12) ? 0xFFFFFFF0 : 0x0);
+			ss << "\tC.JALR\t" << getABIName(0x1) << ", 0(" << getABIName(rs1) << ") \n";
+		}
+		break;
+	}
+	default:
+		ss << "\tUnknown 10 Compressed Instruction\n";
+	}
+
+	m_InstructionStr += ss.str();
+}
+
 
 std::ostream& operator<<(std::ostream& stream, Instruction& instruction)
 {

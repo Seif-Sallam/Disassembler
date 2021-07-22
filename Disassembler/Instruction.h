@@ -47,6 +47,12 @@ public:
 	inline bool IsCompressed() { return m_IsCompressed; }
 
 	/// <summary>
+	/// Returns if the instruction already has a label
+	/// </summary>
+	/// <returns></returns>
+	inline bool HasLabel(std::string& labelName) { labelName = m_LabelName; return m_HasALabel; }
+
+	/// <summary>
 	/// Returns if the instruction was detected to be Branch or a Jump instruction to know 
 	/// if we should give it a label or not
 	/// </summary>
@@ -89,6 +95,16 @@ private:
 	/// </summary>
 	void MakeInstruction();
 
+	void MakeBInstruction();
+	void MakeRInstruction();
+	void MakeIInstruction();
+	void MakeSInstruction();
+	void MakeUInstruction();
+	void MakeLoadInstruction();
+	void Make00Instruction();
+	void Make01Instruction();
+	void Make10Instruction();
+
 	/// <summary>
 	/// Helper function to add a prefix to the instruction string such as the word value and the address
 	/// </summary>
@@ -105,10 +121,11 @@ private:
 private:
 	unsigned int* m_PC;
 	std::string m_InstructionStr;
+	std::string m_LabelName;
 	bool m_IsBranchOrJumpInst;
 	bool m_IsCompressed;
+	bool m_HasALabel;
 	int m_Offset;
 	unsigned int m_InstructionWord;
-
 	static unsigned int m_LabelCounter;
 };
